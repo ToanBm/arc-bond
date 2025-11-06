@@ -7,10 +7,11 @@ import { createAdapterFromProvider } from "@circle-fin/adapter-viem-v2";
 import type { EIP1193Provider } from "viem";
 
 type BridgeStatus = "idle" | "bridging" | "success" | "error";
-export type SupportedChain = "ethereum" | "base" | "arbitrum" | "optimism";
+export type SupportedChain = "arc" | "ethereum" | "base" | "arbitrum" | "optimism";
 
 // Bridge Kit Chain Identifiers (testnet format: Chain_Network)
 const CHAIN_MAPPING: Record<SupportedChain, string> = {
+  arc: "Arc_Testnet",
   ethereum: "Ethereum_Sepolia",
   base: "Base_Sepolia",
   arbitrum: "Arbitrum_Sepolia",
@@ -37,7 +38,7 @@ export function useBridge() {
 
   const bridge = async (
     fromChain: SupportedChain,
-    toChain: "arc",
+    toChain: SupportedChain,
     amount: string
   ) => {
     if (!walletClient || !address) {
@@ -56,33 +57,53 @@ export function useBridge() {
       const adapter = await createAdapterFromProvider({ provider });
 
       const arcChainVariants = ["Arc_Testnet", "Arc", "ARC"];
+      const needsArcVariant = fromChain === "arc" || toChain === "arc";
       
       let result;
-      for (const arcChain of arcChainVariants) {
-        try {
-          result = await kit.bridge({
-            from: {
-              adapter,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              chain: CHAIN_MAPPING[fromChain] as any,
-            },
-            to: {
-              adapter,
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              chain: arcChain as any,
-            },
-            amount,
-          });
-          break;
-        } catch (err: unknown) {
-          if (err instanceof Error && err?.message?.includes("Invalid chain")) {
-            if (arcChain === arcChainVariants[arcChainVariants.length - 1]) {
-              throw new Error("Arc Testnet is not supported by Bridge Kit. Available chains: Ethereum_Sepolia, Base_Sepolia, Arbitrum_Sepolia, Avalanche_Fuji, Polygon_Amoy, Optimism_Sepolia");
+      
+      if (needsArcVariant) {
+        // Try different Arc chain identifiers
+        for (const arcChain of arcChainVariants) {
+          try {
+            result = await kit.bridge({
+              from: {
+                adapter,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                chain: (fromChain === "arc" ? arcChain : CHAIN_MAPPING[fromChain]) as any,
+              },
+              to: {
+                adapter,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                chain: (toChain === "arc" ? arcChain : CHAIN_MAPPING[toChain]) as any,
+              },
+              amount,
+            });
+            break;
+          } catch (err: unknown) {
+            if (err instanceof Error && err?.message?.includes("Invalid chain")) {
+              if (arcChain === arcChainVariants[arcChainVariants.length - 1]) {
+                throw new Error("Arc Testnet is not supported by Bridge Kit. Available chains: Ethereum_Sepolia, Base_Sepolia, Arbitrum_Sepolia, Avalanche_Fuji, Polygon_Amoy, Optimism_Sepolia");
+              }
+            } else {
+              throw err;
             }
-          } else {
-            throw err;
           }
         }
+      } else {
+        // No Arc involved, direct bridge between other chains
+        result = await kit.bridge({
+          from: {
+            adapter,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: CHAIN_MAPPING[fromChain] as any,
+          },
+          to: {
+            adapter,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            chain: CHAIN_MAPPING[toChain] as any,
+          },
+          amount,
+        });
       }
 
       setBridgeStatus("success");

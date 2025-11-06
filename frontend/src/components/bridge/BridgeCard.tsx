@@ -10,6 +10,7 @@ import toast from "react-hot-toast";
 
 // Map selector values to chain IDs
 const CHAIN_ID_MAP: Record<SupportedChain, number> = {
+  arc: 5042002,
   ethereum: sepolia.id,
   base: baseSepolia.id,
   arbitrum: arbitrumSepolia.id,
@@ -18,20 +19,26 @@ const CHAIN_ID_MAP: Record<SupportedChain, number> = {
 
 // USDC addresses on each testnet
 const USDC_ADDRESS_MAP: Record<SupportedChain, `0x${string}`> = {
-  ethereum: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
-  base: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // Base Sepolia USDC
-  arbitrum: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Arbitrum Sepolia USDC
-  optimism: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7", // Optimism Sepolia USDC
+  arc: "0x3600000000000000000000000000000000000000",
+  ethereum: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  base: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  arbitrum: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d",
+  optimism: "0x5fd84259d66Cd46123540766Be93DFE6D43130D7",
 };
 
 export default function BridgeCard() {
   const { address, isConnected, chain } = useAccount();
   const { switchChain } = useSwitchChain();
-  const [fromChain, setFromChain] = useState<SupportedChain>("ethereum");
+  const [isReverse, setIsReverse] = useState(false);
+  const [selectedChain, setSelectedChain] = useState<SupportedChain>("ethereum");
   const [amount, setAmount] = useState("");
   const { bridge, bridgeStatus, currentStep } = useBridge();
 
-  // Fetch USDC balance on current chain
+  // Calculate From/To based on direction
+  const fromChain: SupportedChain = isReverse ? "arc" : selectedChain;
+  const toChain: SupportedChain = isReverse ? selectedChain : "arc";
+
+  // Fetch USDC balance on source chain (fromChain)
   const { data: usdcBalance } = useBalance({
     address: address,
     token: USDC_ADDRESS_MAP[fromChain],
@@ -42,21 +49,25 @@ export default function BridgeCard() {
     ? parseFloat(formatUnits(usdcBalance.value, usdcBalance.decimals)).toFixed(2)
     : "0.00";
 
-  // Auto switch to selected chain
-  const handleChainChange = (selectedChain: SupportedChain) => {
-    setFromChain(selectedChain);
+  // Handle chain selection change
+  const handleChainChange = (newChain: SupportedChain) => {
+    setSelectedChain(newChain);
     
-    const targetChainId = CHAIN_ID_MAP[selectedChain];
+    const targetChainId = CHAIN_ID_MAP[fromChain];
     if (chain?.id !== targetChainId && switchChain) {
-      // Switch chain
       try {
         switchChain({ chainId: targetChainId });
-        toast.success(`Switching to ${selectedChain}...`);
+        toast.success(`Switching to ${newChain}...`);
       } catch (error: unknown) {
         console.error("Failed to switch chain:", error);
         toast.error("Please approve network switch in your wallet");
       }
     }
+  };
+
+  // Swap direction
+  const handleSwap = () => {
+    setIsReverse(!isReverse);
   };
 
   const handleBridge = async () => {
@@ -71,7 +82,7 @@ export default function BridgeCard() {
     }
 
     try {
-      await bridge(fromChain, "arc", amount);
+      await bridge(fromChain, toChain, amount);
       toast.success("Bridge successful!");
       setAmount("");
     } catch (error: unknown) {
@@ -100,31 +111,59 @@ export default function BridgeCard() {
       <h2 className="text-xl font-semibold mb-4">Bridge USDC</h2>
 
       <div className="space-y-4">
-        {/* From/To Card */}
-        <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="grid grid-cols-2 gap-4">
-            {/* From */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                From
-              </label>
-              <ChainSelector
-                value={fromChain}
-                onChange={(chain: SupportedChain) => handleChainChange(chain)}
-                disabled={bridgeStatus === "bridging"}
-              />
-            </div>
-
-            {/* To */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                To
-              </label>
+        {/* From/To */}
+        <div className="flex items-end gap-2">
+          {/* From */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              From
+            </label>
+            {isReverse ? (
               <div className="w-full px-3 py-2 border border-custom rounded-lg bg-gray-100 cursor-not-allowed flex items-center gap-1.5">
                 <img src="/arc.svg" alt="Arc" className="w-5 h-5" />
                 <span>Arc Testnet</span>
               </div>
-            </div>
+            ) : (
+              <ChainSelector
+                value={selectedChain}
+                onChange={handleChainChange}
+                disabled={bridgeStatus === "bridging"}
+              />
+            )}
+          </div>
+
+          {/* Swap Icon */}
+          <div className="mt-7">
+            <button
+              type="button"
+              onClick={handleSwap}
+              disabled={bridgeStatus === "bridging"}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              title="Swap direction"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </button>
+          </div>
+
+          {/* To */}
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              To
+            </label>
+            {isReverse ? (
+              <ChainSelector
+                value={selectedChain}
+                onChange={handleChainChange}
+                disabled={bridgeStatus === "bridging"}
+              />
+            ) : (
+              <div className="w-full px-3 py-2 border border-custom rounded-lg bg-gray-100 cursor-not-allowed flex items-center gap-1.5">
+                <img src="/arc.svg" alt="Arc" className="w-5 h-5" />
+                <span>Arc Testnet</span>
+              </div>
+            )}
           </div>
         </div>
 
