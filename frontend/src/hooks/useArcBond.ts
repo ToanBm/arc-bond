@@ -27,8 +27,14 @@ export function useDashboardData() {
   const emergencyMode = seriesInfo?.[5] ?? false;
 
   // Calculate pending distributions
-  const pendingDistributions = recordCount && lastDistributed 
-    ? Number(recordCount) - Number(lastDistributed)
+  const dashboardRecord = recordCount
+    ? (Array.isArray(recordCount) ? Number(recordCount[0]) : Number(recordCount))
+    : 0;
+  const dashboardLast = lastDistributed
+    ? (Array.isArray(lastDistributed) ? Number(lastDistributed[0]) : Number(lastDistributed))
+    : 0;
+  const pendingDistributions = dashboardRecord > dashboardLast
+    ? dashboardRecord - dashboardLast
     : 0;
 
   // Calculate time to maturity
@@ -118,8 +124,14 @@ export function useAdminData() {
 
   // Snapshot data
   const totalSupply = seriesInfo?.[2] ? seriesInfo[2] : BigInt(0);
-  const pendingDistributions = recordCount && lastDistributed 
-    ? Number(recordCount) - Number(lastDistributed)
+  const adminRecord = recordCount
+    ? (Array.isArray(recordCount) ? Number(recordCount[0]) : Number(recordCount))
+    : 0;
+  const adminLast = lastDistributed
+    ? (Array.isArray(lastDistributed) ? Number(lastDistributed[0]) : Number(lastDistributed))
+    : 0;
+  const pendingDistributions = adminRecord > adminLast
+    ? adminRecord - adminLast
     : 0;
 
   // Calculate coupon due (0.001 USDC per arcUSDC)
