@@ -21,8 +21,15 @@ async function recordSnapshotForPool(pool) {
   
   console.log(`\n📸 Recording snapshot for ${poolLabel} (${pool.poolId})...`);
   
+  // Debug: log pool object received
+  console.log(`   [DEBUG] recordSnapshotForPool received:`);
+  console.log(`     - pool.bondSeries: ${pool.bondSeries || 'MISSING'}`);
+  console.log(`     - pool.bondSeries type: ${typeof pool.bondSeries}`);
+  console.log(`     - pool keys: ${Object.keys(pool).join(', ')}`);
+  
   if (!pool.bondSeries) {
     console.error(`❌ Pool ${pool.poolId}: bondSeries address is missing!`);
+    console.error(`   Pool object:`, JSON.stringify(pool, null, 2));
     return {
       success: false,
       poolId: pool.poolId,
@@ -33,6 +40,7 @@ async function recordSnapshotForPool(pool) {
   }
   
   try {
+    console.log(`   [DEBUG] Calling getBondSeriesContract with address: ${pool.bondSeries}`);
     const { contract, keeper } = getBondSeriesContract(pool.bondSeries);
     
     console.log('\n📍 Keeper address:', keeper.address);
@@ -189,20 +197,40 @@ export async function recordSnapshot() {
     // Record snapshot for each pool
     const results = [];
     for (const pool of pools) {
+      // Debug: log pool object before processing
+      console.log(`\n[DEBUG] Processing pool:`, {
+        poolId: pool.poolId,
+        name: pool.name,
+        bondSeries: pool.bondSeries,
+        bondSeriesType: typeof pool.bondSeries,
+        hasBondSeries: !!pool.bondSeries
+      });
+      
       // Debug: verify pool object
-      if (!pool.bondSeries) {
-        console.error(`\n❌ Pool ${pool.poolId}: bondSeries is missing in pool object!`);
-        console.error('   Pool object:', JSON.stringify(pool, null, 2));
+      // Check for bondSeries - handle both string and other types
+      const bondSeriesAddress = pool.bondSeries;
+      if (!bondSeriesAddress || 
+          bondSeriesAddress === 'undefined' || 
+          bondSeriesAddress === 'null' ||
+          bondSeriesAddress === '' ||
+          typeof bondSeriesAddress !== 'string') {
+        console.error(`\n❌ Pool ${pool.poolId}: bondSeries is missing or invalid in pool object!`);
+        console.error('   bondSeries value:', bondSeriesAddress);
+        console.error('   bondSeries type:', typeof bondSeriesAddress);
+        console.error('   Pool object keys:', Object.keys(pool));
+        console.error('   Full pool object:', JSON.stringify(pool, null, 2));
         results.push({
           success: false,
           poolId: pool.poolId,
           poolName: pool.name || `Pool ${pool.poolId}`,
           reason: 'missing_bondSeries_in_pool_object',
-          error: 'bondSeries address not found in pool object'
+          error: `bondSeries address not found or invalid: ${bondSeriesAddress}`
         });
         continue;
       }
       
+      // Pass bondSeries explicitly to ensure it's available
+      console.log(`   [DEBUG] Calling recordSnapshotForPool with bondSeries: ${bondSeriesAddress}`);
       const result = await recordSnapshotForPool(pool);
       results.push(result);
       
