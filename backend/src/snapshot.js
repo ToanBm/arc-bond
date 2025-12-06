@@ -21,6 +21,17 @@ async function recordSnapshotForPool(pool) {
   
   console.log(`\n📸 Recording snapshot for ${poolLabel} (${pool.poolId})...`);
   
+  if (!pool.bondSeries) {
+    console.error(`❌ Pool ${pool.poolId}: bondSeries address is missing!`);
+    return {
+      success: false,
+      poolId: pool.poolId,
+      poolName: poolLabel,
+      reason: 'missing_bondSeries_address',
+      error: 'bondSeries address not found in pool info'
+    };
+  }
+  
   try {
     const { contract, keeper } = getBondSeriesContract(pool.bondSeries);
     
@@ -178,6 +189,20 @@ export async function recordSnapshot() {
     // Record snapshot for each pool
     const results = [];
     for (const pool of pools) {
+      // Debug: verify pool object
+      if (!pool.bondSeries) {
+        console.error(`\n❌ Pool ${pool.poolId}: bondSeries is missing in pool object!`);
+        console.error('   Pool object:', JSON.stringify(pool, null, 2));
+        results.push({
+          success: false,
+          poolId: pool.poolId,
+          poolName: pool.name || `Pool ${pool.poolId}`,
+          reason: 'missing_bondSeries_in_pool_object',
+          error: 'bondSeries address not found in pool object'
+        });
+        continue;
+      }
+      
       const result = await recordSnapshotForPool(pool);
       results.push(result);
       

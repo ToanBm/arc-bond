@@ -118,9 +118,11 @@ export async function getAllPoolsToMonitor() {
       let poolInfo;
       try {
         poolInfo = await contract.pools(poolId);
+        console.log(`   [DEBUG] Pool ${poolId} via pools() - Type: ${Array.isArray(poolInfo) ? 'Array' : typeof poolInfo}, Length: ${Array.isArray(poolInfo) ? poolInfo.length : 'N/A'}`);
       } catch (err) {
         // Fallback to getPool if pools() fails
         poolInfo = await contract.getPool(poolId);
+        console.log(`   [DEBUG] Pool ${poolId} via getPool() - Type: ${Array.isArray(poolInfo) ? 'Array' : typeof poolInfo}`);
       }
       
       // Handle both array and object return formats
@@ -149,6 +151,22 @@ export async function getAllPoolsToMonitor() {
           createdAt: poolInfo.createdAt,
           isActive: poolInfo.isActive ?? true
         };
+      }
+      
+      // Debug: log decoded pool info
+      console.log(`   [DEBUG] Pool ${poolId} decoded:`);
+      console.log(`     - Type: ${Array.isArray(poolInfo) ? 'Array' : 'Object'}`);
+      console.log(`     - bondSeries: ${pool.bondSeries || 'MISSING/UNDEFINED'}`);
+      console.log(`     - bondToken: ${pool.bondToken || 'MISSING/UNDEFINED'}`);
+      console.log(`     - name: ${pool.name || 'MISSING'}`);
+      
+      // Validate bondSeries address before adding to list
+      const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+      if (!pool.bondSeries || pool.bondSeries === ZERO_ADDRESS || pool.bondSeries === null || pool.bondSeries === undefined) {
+        console.log(`   ❌ Pool ${poolId}: bondSeries address is invalid or missing!`);
+        console.log(`   [DEBUG] Full pool object keys:`, Object.keys(pool));
+        console.log(`   [DEBUG] poolInfo keys (if object):`, poolInfo && typeof poolInfo === 'object' && !Array.isArray(poolInfo) ? Object.keys(poolInfo) : 'N/A');
+        throw new Error(`Pool ${poolId} has invalid bondSeries address: ${pool.bondSeries}`);
       }
       
       // Only add active pools (or if using POOL_IDS, respect user's choice)
