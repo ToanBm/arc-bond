@@ -54,8 +54,9 @@ export const BOND_FACTORY_ABI = [
   // Functions
   "function poolCount() external view returns (uint256)",
   "function pools(uint256) external view returns (uint256 poolId, address bondToken, address bondSeries, uint256 maturityDate, uint256 createdAt, bool isActive, string memory name, string memory symbol)",
-  "function getPool(uint256) external view returns (uint256 poolId, address bondToken, address bondSeries, uint256 maturityDate, uint256 createdAt, bool isActive, string memory name, string memory symbol)",
+  "function getPool(uint256 poolId) external view returns (uint256 poolId, address bondToken, address bondSeries, uint256 maturityDate, uint256 createdAt, bool isActive, string memory name, string memory symbol)",
   "function getActivePools() external view returns (uint256[] memory)",
+  "function getAllPools() external view returns ((uint256 poolId, address bondToken, address bondSeries, uint256 maturityDate, uint256 createdAt, bool isActive, string memory name, string memory symbol)[] memory)",
   
   // Events
   "event PoolCreated(uint256 indexed poolId, address indexed bondToken, address indexed bondSeries, uint256 maturityDate, string name, string symbol)"

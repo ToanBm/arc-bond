@@ -63,62 +63,121 @@ export async function getAllPoolsToMonitor() {
   const { contract } = getBondFactoryContract();
   
   // Get all pools
-  const poolCount = await contract.poolCount();
+  const poolCount = Number(await contract.poolCount());
+  console.log(`   Total pools in Factory: ${poolCount}`);
   
   // If POOL_IDS specified, use those; otherwise get all active pools
   let poolIdsToMonitor = [];
   
   if (POOL_IDS && POOL_IDS.length > 0) {
-    // Use specified pool IDs
-    poolIdsToMonitor = POOL_IDS.map(id => Number(id));
+    // Use specified pool IDs, but validate them
+    poolIdsToMonitor = POOL_IDS.map(id => Number(id)).filter(id => {
+      if (id === 0 || id > poolCount) {
+        console.log(`   ⚠️  Pool ${id} does not exist (poolCount: ${poolCount}), skipping`);
+        return false;
+      }
+      return true;
+    });
+    console.log(`   Monitoring specified pools: ${poolIdsToMonitor.join(', ')}`);
   } else {
     // Get all active pools
     try {
       const activePools = await contract.getActivePools();
-      poolIdsToMonitor = activePools.map(id => Number(id));
-      console.log(`   Found ${poolIdsToMonitor.length} active pools via getActivePools()`);
+      poolIdsToMonitor = activePools.map(id => Number(id)).filter(id => {
+        // Validate pool IDs from getActivePools
+        if (id === 0 || id > poolCount) {
+          console.log(`   ⚠️  Pool ${id} from getActivePools() is invalid (poolCount: ${poolCount}), skipping`);
+          return false;
+        }
+        return true;
+      });
+      console.log(`   Found ${poolIdsToMonitor.length} valid active pools via getActivePools()`);
     } catch (error) {
-      // Fallback: iterate through all pools and filter by isActive
-      console.log('   getActivePools() not available, iterating through all pools...');
-      for (let i = 1; i <= Number(poolCount); i++) {
+      console.log('   getActivePools() failed, iterating through all pools...');
+    }
+    
+    // Fallback: if getActivePools failed or returned invalid pools, iterate through all pools
+    if (poolIdsToMonitor.length === 0 && poolCount > 0) {
+      console.log(`   Fallback: Checking all pools from 1 to ${poolCount}...`);
+      for (let i = 1; i <= poolCount; i++) {
         poolIdsToMonitor.push(i);
       }
     }
+  }
+  
+  if (poolIdsToMonitor.length === 0) {
+    console.log('   ⚠️  No valid pools to monitor');
+    return [];
   }
   
   // Fetch pool info
   const pools = [];
   for (const poolId of poolIdsToMonitor) {
     try {
-      const poolInfo = await contract.getPool(poolId);
+      // Try using pools mapping first (more reliable for struct decoding)
+      let poolInfo;
+      try {
+        poolInfo = await contract.pools(poolId);
+      } catch (err) {
+        // Fallback to getPool if pools() fails
+        poolInfo = await contract.getPool(poolId);
+      }
+      
+      // Handle both array and object return formats
+      let pool;
+      if (Array.isArray(poolInfo)) {
+        // If returned as array/tuple
+        pool = {
+          poolId: poolInfo[0]?.toString() || poolId.toString(),
+          bondToken: poolInfo[1],
+          bondSeries: poolInfo[2],
+          maturityDate: poolInfo[3],
+          createdAt: poolInfo[4],
+          isActive: poolInfo[5] ?? true,
+          name: poolInfo[6] || `Pool ${poolId}`,
+          symbol: poolInfo[7] || `arcUSDC-${poolId}`
+        };
+      } else {
+        // If returned as object
+        pool = {
+          poolId: poolInfo.poolId?.toString() || poolId.toString(),
+          bondSeries: poolInfo.bondSeries,
+          bondToken: poolInfo.bondToken,
+          name: poolInfo.name || `Pool ${poolId}`,
+          symbol: poolInfo.symbol || `arcUSDC-${poolId}`,
+          maturityDate: poolInfo.maturityDate,
+          createdAt: poolInfo.createdAt,
+          isActive: poolInfo.isActive ?? true
+        };
+      }
+      
       // Only add active pools (or if using POOL_IDS, respect user's choice)
       if (POOL_IDS && POOL_IDS.length > 0) {
         // User specified pools - add even if inactive (they might want to monitor inactive pools)
-        pools.push({
-          poolId: poolInfo.poolId.toString(),
-          bondSeries: poolInfo.bondSeries,
-          bondToken: poolInfo.bondToken,
-          name: poolInfo.name,
-          symbol: poolInfo.symbol,
-          maturityDate: poolInfo.maturityDate,
-          createdAt: poolInfo.createdAt,
-          isActive: poolInfo.isActive
-        });
-      } else if (poolInfo.isActive) {
-        // Auto-discovery mode - only add active pools
-        pools.push({
-          poolId: poolInfo.poolId.toString(),
-          bondSeries: poolInfo.bondSeries,
-          bondToken: poolInfo.bondToken,
-          name: poolInfo.name,
-          symbol: poolInfo.symbol,
-          maturityDate: poolInfo.maturityDate,
-          createdAt: poolInfo.createdAt,
-          isActive: poolInfo.isActive
-        });
+        pools.push(pool);
+        console.log(`   ✓ Pool ${poolId}: ${pool.name} (${pool.isActive ? 'Active' : 'Inactive'})`);
+      } else if (pool.isActive) {
+        // Auto-discovery mode - only add active pools that are not matured
+        const now = Math.floor(Date.now() / 1000);
+        const maturityTimestamp = Number(pool.maturityDate);
+        if (now < maturityTimestamp) {
+          pools.push(pool);
+          const daysToMaturity = Math.floor((maturityTimestamp - now) / 86400);
+          console.log(`   ✓ Pool ${poolId}: ${pool.name} (Active, ${daysToMaturity}d to maturity)`);
+        } else {
+          console.log(`   ⏭️  Pool ${poolId}: ${pool.name} (Matured, skipping)`);
+        }
+      } else {
+        console.log(`   ⏭️  Pool ${poolId}: ${pool.name} (inactive, skipping)`);
       }
     } catch (error) {
-      console.log(`   ⚠️  Failed to fetch pool ${poolId}:`, error.message);
+      // Check if it's PoolNotFound error (error code 0x76ecffc0)
+      if (error.code === 'CALL_EXCEPTION' || error.message.includes('revert') || error.data === '0x76ecffc0') {
+        console.log(`   ❌ Pool ${poolId}: Not found or invalid (poolCount: ${poolCount})`);
+        // Continue to next pool instead of failing completely
+      } else {
+        console.log(`   ⚠️  Failed to fetch pool ${poolId}:`, error.message);
+      }
     }
   }
   

@@ -11,8 +11,18 @@ echo ""
 
 # Check if running as root
 if [ "$EUID" -eq 0 ]; then 
-   echo "⚠️  Please don't run as root. Run as a regular user with sudo privileges."
-   exit 1
+   echo "⚠️  Running as root user."
+   echo "⚠️  For better security, consider creating a dedicated user:"
+   echo "   adduser arcbond"
+   echo "   usermod -aG sudo arcbond"
+   echo "   su - arcbond"
+   echo ""
+   read -p "Continue as root? (y/N): " -n 1 -r
+   echo
+   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+       exit 1
+   fi
+   echo ""
 fi
 
 # Colors
@@ -21,12 +31,18 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Determine if we need sudo
+SUDO=""
+if [ "$EUID" -ne 0 ]; then
+    SUDO="sudo"
+fi
+
 # Check Node.js
 echo "📦 Checking Node.js..."
 if ! command -v node &> /dev/null; then
     echo -e "${RED}❌ Node.js not found. Installing Node.js 18...${NC}"
-    curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    curl -fsSL https://deb.nodesource.com/setup_18.x | $SUDO -E bash -
+    $SUDO apt-get install -y nodejs
 fi
 
 NODE_VERSION=$(node -v)
@@ -37,7 +53,11 @@ echo ""
 echo "📦 Checking PM2..."
 if ! command -v pm2 &> /dev/null; then
     echo -e "${YELLOW}⚠️  PM2 not found. Installing PM2...${NC}"
-    sudo npm install -g pm2
+    if [ "$EUID" -eq 0 ]; then
+        npm install -g pm2
+    else
+        sudo npm install -g pm2
+    fi
 fi
 
 PM2_VERSION=$(pm2 -v)
