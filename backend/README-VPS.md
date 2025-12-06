@@ -131,7 +131,7 @@ sudo systemctl status cron
 
 ```bash
 # Start apps
-pm2 start ecosystem.config.js
+pm2 start ecosystem.config.cjs
 
 # Stop apps
 pm2 stop all
