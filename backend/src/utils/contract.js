@@ -207,8 +207,29 @@ export async function getAllPoolsToMonitor() {
 /**
  * Get keeper balance
  */
-export async function getKeeperBalance() {
-  const { keeper, provider } = getBondSeriesContract();
+export async function getKeeperBalance(bondSeriesAddress) {
+  // In Factory mode, we need a bondSeriesAddress to get keeper
+  // If not provided, try to get from first pool or use BOND_SERIES_ADDRESS
+  let addressToUse = bondSeriesAddress;
+  
+  if (!addressToUse && USE_FACTORY) {
+    // Try to get from first pool
+    try {
+      const pools = await getAllPoolsToMonitor();
+      if (pools.length > 0 && pools[0].bondSeries) {
+        addressToUse = pools[0].bondSeries;
+      }
+    } catch (error) {
+      // Fall back to BOND_SERIES_ADDRESS if available
+      addressToUse = BOND_SERIES_ADDRESS;
+    }
+  }
+  
+  if (!addressToUse) {
+    addressToUse = BOND_SERIES_ADDRESS;
+  }
+  
+  const { keeper, provider } = getBondSeriesContract(addressToUse);
   const balance = await provider.getBalance(keeper.address);
   return balance;
 }

@@ -184,8 +184,9 @@ export async function recordSnapshot() {
       return { success: false, reason: 'no_pools' };
     }
     
-    // Check keeper balance once
-    const keeperBalance = await getKeeperBalance();
+    // Check keeper balance once (use first pool's bondSeries if available)
+    const bondSeriesAddress = pools.length > 0 && pools[0].bondSeries ? pools[0].bondSeries : undefined;
+    const keeperBalance = await getKeeperBalance(bondSeriesAddress);
     console.log('💰 Keeper balance:', ethers.formatUnits(keeperBalance, 18), 'USDC');
     
     const MIN_BALANCE = ethers.parseUnits('1', 18); // 1 USDC (native token)
