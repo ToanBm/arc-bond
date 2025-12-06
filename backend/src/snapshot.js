@@ -69,7 +69,12 @@ async function recordSnapshotForPool(pool) {
     if (!timeLeft.canRecord) {
       console.log(`\n⏰ Too soon! Need to wait ${timeLeft.hours.toFixed(1)} hours`);
       await notifyTooSoon(timeLeft.hours);
-      return { success: false, reason: 'too_soon' };
+      return { 
+        success: false, 
+        poolId: pool.poolId,
+        poolName: poolLabel,
+        reason: 'too_soon' 
+      };
     }
     
     console.log('\n✅ Can record snapshot now!');
