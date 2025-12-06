@@ -28,7 +28,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     uint256 public constant DEFAULT_GRACE_PERIOD = 3 days;
     uint256 public constant SNAPSHOT_INTERVAL = 1 days; // Production: 1 day (24 hours)
     uint256 public constant PRECISION = 1e6; // Match USDC decimals for zero precision loss
-    uint256 public constant MAX_CAP = 100_000e6; // 100,000 USDC cap
+    uint256 public constant MAX_CAP = 10_000e6; // 10,000 USDC cap
 
     // ==================== STATE VARIABLES ====================
     
@@ -73,6 +73,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     error CapExceeded();
     error InvalidAmount();
     error NotMatured();
+    error PoolExpired();
     error TooSoon();
     error NoSnapshotAvailable();
     error InsufficientBalance();
@@ -116,6 +117,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
      */
     function deposit(uint256 usdcAmount) external nonReentrant whenNotPaused {
         if (usdcAmount == 0) revert InvalidAmount();
+        if (block.timestamp >= maturityDate) revert PoolExpired();
         if (totalDeposited + usdcAmount > MAX_CAP) revert CapExceeded();
         
         // Calculate bond amount (1 USDC → 10 BondToken)

@@ -4,6 +4,7 @@ import { WagmiProvider } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { wagmiConfig } from "@/config/wagmi";
 import { Toaster } from "react-hot-toast";
+import { PoolProvider } from "@/contexts/PoolContext";
 
 const queryClient = new QueryClient();
 
@@ -11,10 +12,11 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        {Array.isArray(children)
-          ? children.map((child, idx) => <div key={idx}>{child}</div>)
-          : children}
-        <Toaster
+        <PoolProvider>
+          {Array.isArray(children)
+            ? children.map((child, idx) => <div key={idx}>{child}</div>)
+            : children}
+          <Toaster
           position="bottom-right"
           toastOptions={{
             duration: 5000,
@@ -36,6 +38,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             },
           }}
         />
+        </PoolProvider>
       </QueryClientProvider>
     </WagmiProvider>
   );

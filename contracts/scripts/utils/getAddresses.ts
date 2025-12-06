@@ -32,3 +32,31 @@ export async function getDeployedAddresses() {
   };
 }
 
+/**
+ * Get addresses from deployment file (generic function)
+ */
+export function getAddresses(chainId: number, filename: string) {
+  const deploymentPath = path.join(__dirname, "../../deployments", filename);
+  
+  if (!fs.existsSync(deploymentPath)) {
+    throw new Error(`❌ Deployment file not found: ${filename}`);
+  }
+  
+  const deploymentData = JSON.parse(fs.readFileSync(deploymentPath, "utf-8"));
+  
+  if (!deploymentData[chainId.toString()]) {
+    throw new Error(`❌ No deployment found for chain ID ${chainId} in ${filename}`);
+  }
+  
+  const contracts = deploymentData[chainId.toString()].contracts;
+  
+  return {
+    USDC: contracts.USDC?.address,
+    BondFactory: contracts.BondFactory?.address,
+    BondToken: contracts.BondToken?.address,
+    BondSeries: contracts.BondSeries?.address,
+    pools: contracts.pools || {},
+    chainId: chainId
+  };
+}
+

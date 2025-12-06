@@ -1,0 +1,27 @@
+{
+  "name": "arcbond-backend",
+  "version": "1.0.0",
+  "description": "ArcBond automated snapshot keeper",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "snapshot": "node src/snapshot.js",
+    "monitor": "node src/monitor.js",
+    "test": "node src/test.js"
+  },
+  "keywords": [
+    "arcbond",
+    "defi",
+    "cron",
+    "keeper"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.4.5"
+  }
+}
+

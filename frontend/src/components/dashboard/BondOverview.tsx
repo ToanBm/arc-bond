@@ -50,8 +50,12 @@ export default function BondOverview() {
         </div>
         
         <div className="text-center">
-          <div className="text-sm text-gray-600 mb-2">Maturity</div>
-          <div className="text-lg font-bold text-gray-900">{timeToMaturity}</div>
+          <div className="text-sm text-gray-600 mb-2">
+            {timeToMaturity === 'Matured' ? 'Status' : 'Time to Maturity'}
+          </div>
+          <div className={`text-lg font-bold ${timeToMaturity === 'Matured' ? 'text-green-600' : 'text-gray-900'}`}>
+            {timeToMaturity === 'Matured' ? '✅ Matured' : timeToMaturity}
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,13 @@
 import { useReadContract } from 'wagmi';
-import { ABIs, getContractAddresses } from '@/abi/contracts';
+import { ABIs } from '@/abi/contracts';
+import { usePool } from '@/contexts/PoolContext';
+import { useMemo } from 'react';
 
-const { bondToken: BOND_TOKEN_ADDRESS } = getContractAddresses();
+// Helper to get BondToken address from pool
+function useBondTokenAddress() {
+  const { selectedPool } = usePool();
+  return useMemo(() => selectedPool?.bondToken || undefined, [selectedPool]);
+}
 
 /**
  * Read Hooks for BondToken (arcUSDC)
@@ -9,47 +15,57 @@ const { bondToken: BOND_TOKEN_ADDRESS } = getContractAddresses();
 
 // Get user arcUSDC balance
 export function useBondTokenBalance(address?: `0x${string}`) {
+  const bondTokenAddress = useBondTokenAddress();
   return useReadContract({
-    address: BOND_TOKEN_ADDRESS,
+    address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
+    query: { enabled: !!bondTokenAddress && !!address },
   });
 }
 
 // Get total supply
 export function useBondTokenTotalSupply() {
+  const bondTokenAddress = useBondTokenAddress();
   return useReadContract({
-    address: BOND_TOKEN_ADDRESS,
+    address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'totalSupply',
+    query: { enabled: !!bondTokenAddress },
   });
 }
 
 // Get decimals
 export function useBondTokenDecimals() {
+  const bondTokenAddress = useBondTokenAddress();
   return useReadContract({
-    address: BOND_TOKEN_ADDRESS,
+    address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'decimals',
+    query: { enabled: !!bondTokenAddress },
   });
 }
 
 // Get symbol
 export function useBondTokenSymbol() {
+  const bondTokenAddress = useBondTokenAddress();
   return useReadContract({
-    address: BOND_TOKEN_ADDRESS,
+    address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'symbol',
+    query: { enabled: !!bondTokenAddress },
   });
 }
 
 // Get name
 export function useBondTokenName() {
+  const bondTokenAddress = useBondTokenAddress();
   return useReadContract({
-    address: BOND_TOKEN_ADDRESS,
+    address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'name',
+    query: { enabled: !!bondTokenAddress },
   });
 }
 

@@ -86,7 +86,11 @@ export default function DashboardOverview() {
           <div className="grid grid-cols-3 gap-6">
             <MetricItem label="Snapshots Recorded" value={recordCount} unit="" />
             <MetricItem label="Total Coupons Paid" value={totalCouponsPaid} unit="USDC" />
-            <MetricItem label="Time to Maturity" value={timeToMaturity} unit="" />
+            <MetricItem 
+              label={timeToMaturity === 'Matured' ? 'Status' : 'Time to Maturity'} 
+              value={timeToMaturity === 'Matured' ? '✅ Matured' : timeToMaturity} 
+              unit="" 
+            />
           </div>
         </div>
       </div>

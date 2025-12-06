@@ -98,6 +98,11 @@ export const BondSeriesABI = {
     },
     {
       "inputs": [],
+      "name": "PoolExpired",
+      "type": "error"
+    },
+    {
+      "inputs": [],
       "name": "ReentrancyGuardReentrantCall",
       "type": "error"
     },

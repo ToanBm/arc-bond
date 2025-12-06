@@ -35,7 +35,7 @@ async function main() {
 
   // ==================== 3. Deploy BondSeries ====================
   console.log("3️⃣ Deploying BondSeries...");
-  const MATURITY_HOURS = 336; // 14 days (336 hours) for production
+  const MATURITY_HOURS = 168; // 7 days (168 hours) for production
   const BondSeries = await ethers.getContractFactory("BondSeries");
   const bondSeries = await BondSeries.deploy(
     bondTokenAddress,
@@ -115,7 +115,7 @@ async function main() {
   console.log("   Decimals:    6 (arcUSDC) = 6 (USDC) - Zero precision loss!");
   console.log("   Coupon Rate: 1% per day (365% APY)");
   console.log("   Snapshot:    Every 1 day (24 hours)");
-  console.log("   Maturity:    " + MATURITY_HOURS + " hours (14 days)");
+  console.log("   Maturity:    " + MATURITY_HOURS + " hours (7 days)");
   console.log("   Reserve:     30%");
   console.log("   Cap:         100,000 USDC");
   console.log("");

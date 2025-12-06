@@ -1,8 +1,16 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { ABIs, getContractAddresses } from '@/abi/contracts';
 import { parseUnits } from 'viem';
+import { usePool } from '@/contexts/PoolContext';
+import { useMemo } from 'react';
 
-const { usdc: USDC_ADDRESS, bondSeries: BOND_SERIES_ADDRESS } = getContractAddresses();
+const { usdc: USDC_ADDRESS } = getContractAddresses();
+
+// Helper to get BondSeries address from pool for allowance
+function useBondSeriesAddressForAllowance() {
+  const { selectedPool } = usePool();
+  return useMemo(() => selectedPool?.bondSeries || undefined, [selectedPool]);
+}
 
 /**
  * Read Hooks for USDC
@@ -20,11 +28,13 @@ export function useUSDCBalance(address?: `0x${string}`) {
 
 // Get allowance (how much BondSeries can spend)
 export function useUSDCAllowance(ownerAddress?: `0x${string}`) {
+  const bondSeriesAddress = useBondSeriesAddressForAllowance();
   return useReadContract({
     address: USDC_ADDRESS,
     abi: ABIs.USDC,
     functionName: 'allowance',
-    args: ownerAddress ? [ownerAddress, BOND_SERIES_ADDRESS] : undefined,
+    args: ownerAddress && bondSeriesAddress ? [ownerAddress, bondSeriesAddress] : undefined,
+    query: { enabled: !!ownerAddress && !!bondSeriesAddress },
   });
 }
 
@@ -52,15 +62,17 @@ export function useUSDCSymbol() {
 
 // Approve BondSeries to spend USDC
 export function useApproveUSDC() {
+  const bondSeriesAddress = useBondSeriesAddressForAllowance();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const approve = (amount: string) => {
+    if (!bondSeriesAddress) return;
     writeContract({
       address: USDC_ADDRESS,
       abi: ABIs.USDC,
       functionName: 'approve',
-      args: [BOND_SERIES_ADDRESS, parseUnits(amount, 6)],
+      args: [bondSeriesAddress, parseUnits(amount, 6)],
     });
   };
 
@@ -76,16 +88,18 @@ export function useApproveUSDC() {
 
 // Approve unlimited (max uint256)
 export function useApproveUSDCMax() {
+  const bondSeriesAddress = useBondSeriesAddressForAllowance();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const approveMax = () => {
+    if (!bondSeriesAddress) return;
     const MAX_UINT256 = BigInt('0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff');
     writeContract({
       address: USDC_ADDRESS,
       abi: ABIs.USDC,
       functionName: 'approve',
-      args: [BOND_SERIES_ADDRESS, MAX_UINT256],
+      args: [bondSeriesAddress, MAX_UINT256],
     });
   };
 

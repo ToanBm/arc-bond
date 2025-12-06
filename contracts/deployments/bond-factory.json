@@ -2,7 +2,7 @@
   "5042002": {
     "chainId": 5042002,
     "chainName": "arc",
-    "deployedAt": "2025-11-05T08:33:24.253Z",
+    "deployedAt": "2025-12-06T08:35:45.669Z",
     "contracts": {
       "USDC": {
         "address": "0x3600000000000000000000000000000000000000",
@@ -10,15 +10,20 @@
         "name": "USDC",
         "symbol": "USDC"
       },
-      "BondToken": {
-        "address": "0xC7d8a4722b01FDBe8E36D8b0831211Ae9c2D151F",
-        "decimals": 6,
-        "name": "ArcBond USDC",
-        "symbol": "arcUSDC"
+      "BondFactory": {
+        "address": "0x1374E95C3867F7b54F3d2517e1C3a6Ba18c98eAd"
       },
-      "BondSeries": {
-        "address": "0xF501820e6C95c84b7607AEE41b422FEc497AC7FE",
-        "maturityHours": 336
+      "pools": {
+        "1": {
+          "poolId": "1",
+          "name": "ArcBond USDC Series 1",
+          "symbol": "arcUSDC-1",
+          "bondToken": "0xCcBC116c212C3DB7a715e32Af5b009D2fccB1B7c",
+          "bondSeries": "0x73363003d9b5faa45b35A9877a24b1FF8bb65228",
+          "maturityDate": "1765615451",
+          "createdAt": "1765010651",
+          "isActive": true
+        }
       }
     }
   },
@@ -779,6 +784,11 @@
       {
         "inputs": [],
         "name": "NotMatured",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "PoolExpired",
         "type": "error"
       },
       {
@@ -1722,6 +1732,856 @@
         "outputs": [
           {
             "internalType": "contract IERC20",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }
+    ],
+    "BondFactory": [
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "usdc_",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "admin_",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "constructor"
+      },
+      {
+        "inputs": [],
+        "name": "AccessControlBadConfirmation",
+        "type": "error"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "neededRole",
+            "type": "bytes32"
+          }
+        ],
+        "name": "AccessControlUnauthorizedAccount",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidAddress",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidMaturityHours",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidName",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "InvalidSymbol",
+        "type": "error"
+      },
+      {
+        "inputs": [],
+        "name": "PoolNotFound",
+        "type": "error"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "bondToken",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "bondSeries",
+            "type": "address"
+          },
+          {
+            "indexed": false,
+            "internalType": "uint256",
+            "name": "maturityDate",
+            "type": "uint256"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "indexed": false,
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
+          }
+        ],
+        "name": "PoolCreated",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "previousAdminRole",
+            "type": "bytes32"
+          },
+          {
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "newAdminRole",
+            "type": "bytes32"
+          }
+        ],
+        "name": "RoleAdminChanged",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "sender",
+            "type": "address"
+          }
+        ],
+        "name": "RoleGranted",
+        "type": "event"
+      },
+      {
+        "anonymous": false,
+        "inputs": [
+          {
+            "indexed": true,
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "indexed": true,
+            "internalType": "address",
+            "name": "sender",
+            "type": "address"
+          }
+        ],
+        "name": "RoleRevoked",
+        "type": "event"
+      },
+      {
+        "inputs": [],
+        "name": "DEFAULT_ADMIN_ROLE",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "POOL_CREATOR_ROLE",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "string",
+            "name": "name_",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol_",
+            "type": "string"
+          },
+          {
+            "internalType": "address",
+            "name": "keeper_",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maturityHours_",
+            "type": "uint256"
+          }
+        ],
+        "name": "createPool",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "bondToken",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "bondSeries",
+            "type": "address"
+          }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          }
+        ],
+        "name": "deactivatePool",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getActivePools",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "bondToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "bondSeries",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maturityDate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "createdAt",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isActive",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct BondFactory.PoolInfo[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getAllPools",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "bondToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "bondSeries",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maturityDate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "createdAt",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isActive",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct BondFactory.PoolInfo[]",
+            "name": "",
+            "type": "tuple[]"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          }
+        ],
+        "name": "getPool",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "bondToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "bondSeries",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maturityDate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "createdAt",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isActive",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct BondFactory.PoolInfo",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "bondSeries_",
+            "type": "address"
+          }
+        ],
+        "name": "getPoolByBondSeries",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "bondToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "bondSeries",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maturityDate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "createdAt",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isActive",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct BondFactory.PoolInfo",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "bondToken_",
+            "type": "address"
+          }
+        ],
+        "name": "getPoolByBondToken",
+        "outputs": [
+          {
+            "components": [
+              {
+                "internalType": "uint256",
+                "name": "poolId",
+                "type": "uint256"
+              },
+              {
+                "internalType": "address",
+                "name": "bondToken",
+                "type": "address"
+              },
+              {
+                "internalType": "address",
+                "name": "bondSeries",
+                "type": "address"
+              },
+              {
+                "internalType": "uint256",
+                "name": "maturityDate",
+                "type": "uint256"
+              },
+              {
+                "internalType": "uint256",
+                "name": "createdAt",
+                "type": "uint256"
+              },
+              {
+                "internalType": "bool",
+                "name": "isActive",
+                "type": "bool"
+              },
+              {
+                "internalType": "string",
+                "name": "name",
+                "type": "string"
+              },
+              {
+                "internalType": "string",
+                "name": "symbol",
+                "type": "string"
+              }
+            ],
+            "internalType": "struct BondFactory.PoolInfo",
+            "name": "",
+            "type": "tuple"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "getPoolCount",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          }
+        ],
+        "name": "getRoleAdmin",
+        "outputs": [
+          {
+            "internalType": "bytes32",
+            "name": "",
+            "type": "bytes32"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "grantPoolCreatorRole",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "grantRole",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "hasRole",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          }
+        ],
+        "name": "isPoolActive",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "poolCount",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "poolIdByBondSeries",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "",
+            "type": "address"
+          }
+        ],
+        "name": "poolIdByBondToken",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "name": "pools",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "poolId",
+            "type": "uint256"
+          },
+          {
+            "internalType": "address",
+            "name": "bondToken",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "bondSeries",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "maturityDate",
+            "type": "uint256"
+          },
+          {
+            "internalType": "uint256",
+            "name": "createdAt",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isActive",
+            "type": "bool"
+          },
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "callerConfirmation",
+            "type": "address"
+          }
+        ],
+        "name": "renounceRole",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "revokePoolCreatorRole",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes32",
+            "name": "role",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "revokeRole",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "bytes4",
+            "name": "interfaceId",
+            "type": "bytes4"
+          }
+        ],
+        "name": "supportsInterface",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "",
+            "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [],
+        "name": "usdc",
+        "outputs": [
+          {
+            "internalType": "address",
             "name": "",
             "type": "address"
           }
