@@ -22,7 +22,8 @@ export const POOL_IDS = process.env.POOL_IDS ?
   null;
 
 // Cron schedule (for local index.js only - Render uses render.yaml)
-export const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 0 * * *'; // Every day at 00:00 UTC
+// Run every hour to catch the 00:00 UTC window when contract allows recording
+export const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '0 * * * *'; // Every hour
 
 // Discord webhook
 export const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;

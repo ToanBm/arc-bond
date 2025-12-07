@@ -77,7 +77,33 @@ async function recordSnapshotForPool(pool) {
       };
     }
     
-    console.log('\n✅ Can record snapshot now!');
+    // Check if we're in the target time window (00:00-00:10 UTC)
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMinute = now.getUTCMinutes();
+    const isInTargetWindow = utcHour === 0 && utcMinute <= 10;
+    
+    if (!isInTargetWindow) {
+      // Contract allows recording, but we want to sync to 00:00 UTC
+      // Calculate time until next 00:00 UTC
+      const nextMidnight = new Date(now);
+      nextMidnight.setUTCDate(nextMidnight.getUTCDate() + 1); // Next day
+      nextMidnight.setUTCHours(0, 0, 0, 0); // 00:00:00 UTC
+      const hoursUntilMidnight = (nextMidnight - now) / (1000 * 60 * 60);
+      
+      console.log(`\n⏰ Contract allows recording, but waiting for 00:00 UTC window...`);
+      console.log(`   Current time: ${now.toISOString()} (UTC)`);
+      console.log(`   Will record at next 00:00 UTC (in ${hoursUntilMidnight.toFixed(1)} hours)`);
+      return { 
+        success: false, 
+        poolId: pool.poolId,
+        poolName: poolLabel,
+        reason: 'waiting_for_midnight_utc',
+        nextRecordWindow: nextMidnight.toISOString()
+      };
+    }
+    
+    console.log('\n✅ Can record snapshot now! (Within 00:00-00:10 UTC window)');
     
     // Record snapshot
     console.log('⏳ Sending transaction...');
