@@ -65,9 +65,23 @@ async function recordSnapshotForPool(pool) {
     
     // Check if can record
     const timeLeft = getTimeLeft(nextRecordTime);
+    const now = new Date();
+    const utcHour = now.getUTCHours();
+    const utcMinute = now.getUTCMinutes();
     
+    // Check if contract allows recording
     if (!timeLeft.canRecord) {
       console.log(`\n⏰ Too soon! Need to wait ${timeLeft.hours.toFixed(1)} hours`);
+      console.log(`   Current UTC time: ${now.toISOString()}`);
+      console.log(`   Next record time: ${formatTimestamp(nextRecordTime)}`);
+      
+      // Check if nextRecordTime is very close (within 5 minutes) - might be timing issue
+      const secondsUntilReady = timeLeft.seconds;
+      if (secondsUntilReady > 0 && secondsUntilReady <= 300) { // Within 5 minutes
+        console.log(`   ⚠️  Very close! Will be ready in ${Math.floor(secondsUntilReady / 60)} minutes`);
+        console.log(`   Will retry on next cron run (every hour)`);
+      }
+      
       await notifyTooSoon(timeLeft.hours);
       return { 
         success: false, 
@@ -77,33 +91,56 @@ async function recordSnapshotForPool(pool) {
       };
     }
     
-    // Check if we're in the target time window (00:00-00:10 UTC)
-    const now = new Date();
-    const utcHour = now.getUTCHours();
-    const utcMinute = now.getUTCMinutes();
-    const isInTargetWindow = utcHour === 0 && utcMinute <= 10;
-    
-    if (!isInTargetWindow) {
-      // Contract allows recording, but we want to sync to 00:00 UTC
-      // Calculate time until next 00:00 UTC
-      const nextMidnight = new Date(now);
-      nextMidnight.setUTCDate(nextMidnight.getUTCDate() + 1); // Next day
-      nextMidnight.setUTCHours(0, 0, 0, 0); // 00:00:00 UTC
-      const hoursUntilMidnight = (nextMidnight - now) / (1000 * 60 * 60);
+    // Check if this is the first snapshot (recordCount === 0)
+    // If first snapshot, record immediately to initialize the cycle
+    // After first snapshot, sync to 00:00 UTC window
+    if (recordCount === 0n) {
+      // First snapshot - record now regardless of time to initialize
+      console.log(`\n✅ First snapshot detected - recording now to initialize cycle`);
+      console.log(`   Record Count: 0 (no snapshots yet)`);
+      console.log(`   After this, snapshots will sync to 00:00 UTC naturally`);
+      console.log(`   Current UTC time: ${now.toISOString()}`);
+    } else {
+      // Not first snapshot - check if we're in the target window (00:00-00:30 UTC)
+      const isInTargetWindow = utcHour === 0 && utcMinute <= 30;
       
-      console.log(`\n⏰ Contract allows recording, but waiting for 00:00 UTC window...`);
-      console.log(`   Current time: ${now.toISOString()} (UTC)`);
-      console.log(`   Will record at next 00:00 UTC (in ${hoursUntilMidnight.toFixed(1)} hours)`);
-      return { 
-        success: false, 
-        poolId: pool.poolId,
-        poolName: poolLabel,
-        reason: 'waiting_for_midnight_utc',
-        nextRecordWindow: nextMidnight.toISOString()
-      };
+      if (isInTargetWindow) {
+        // Perfect! We're in the target window and contract allows recording
+        console.log('\n✅ Can record snapshot now! (Within 00:00-00:30 UTC window)');
+        console.log(`   Current UTC time: ${now.toISOString()}`);
+      } else {
+        // Contract allows but outside window
+        // Check how long ago contract became ready
+        const secondsSinceReady = -timeLeft.seconds; // Negative because canRecord = true
+        const hoursSinceReady = secondsSinceReady / 3600;
+        
+        // If contract just became ready (within last 2 hours), record anyway
+        // This handles the case where contract's nextRecordTime aligns with 00:00 but cron runs slightly late
+        if (hoursSinceReady <= 2) {
+          console.log(`\n✅ Contract allows recording (ready ${hoursSinceReady.toFixed(2)} hours ago)`);
+          console.log(`   Recording now to avoid missing the opportunity`);
+          console.log(`   Current UTC time: ${now.toISOString()}`);
+        } else {
+          // Contract has been ready for a while, wait for next 00:00 window to maintain sync
+          const nextMidnight = new Date(now);
+          nextMidnight.setUTCDate(nextMidnight.getUTCDate() + 1);
+          nextMidnight.setUTCHours(0, 0, 0, 0);
+          const hoursUntilMidnight = (nextMidnight - now) / (1000 * 60 * 60);
+          
+          console.log(`\n⏰ Contract allows recording, but outside 00:00 UTC window...`);
+          console.log(`   Current time: ${now.toISOString()} (UTC)`);
+          console.log(`   Contract has been ready for ${hoursSinceReady.toFixed(1)} hours`);
+          console.log(`   Will record at next 00:00 UTC (in ${hoursUntilMidnight.toFixed(1)} hours)`);
+          return { 
+            success: false, 
+            poolId: pool.poolId,
+            poolName: poolLabel,
+            reason: 'waiting_for_midnight_utc',
+            nextRecordWindow: nextMidnight.toISOString()
+          };
+        }
+      }
     }
-    
-    console.log('\n✅ Can record snapshot now! (Within 00:00-00:10 UTC window)');
     
     // Record snapshot
     console.log('⏳ Sending transaction...');
