@@ -54,14 +54,14 @@ export default function ClaimCard() {
           {/* Claimable Amount - Left (50%) */}
           <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-4 py-2 text-center flex items-center justify-center">
             <div className="text-sm text-gray-600">
-              Claimable Amount: <span className="font-bold text-gray-900">{formattedClaimable} USDC</span>
+              Claimable Amount: <span className="text-base font-bold text-gray-900">{formattedClaimable} USDC</span>
             </div>
           </div>
 
           {/* Total Claimed - Right (50%) */}
           <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-4 py-2 text-center flex items-center justify-center">
             <div className="text-sm text-gray-600">
-              Total Claimed: <span className="font-bold text-gray-900">{formattedClaimed} USDC</span>
+              Total Claimed: <span className="text-base font-bold text-gray-900">{formattedClaimed} USDC</span>
             </div>
           </div>
         </div>

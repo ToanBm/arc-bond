@@ -26,6 +26,8 @@ const SNAPSHOT_INTERVAL_SEC = 5 * 60; // 5 minutes in seconds
 
 let isRunning = true;
 let lastRecordTime = {}; // Track last record time per pool
+let lastPoolsRefresh = 0; // Track last pools refresh time
+let poolsCache = []; // Cache pools list for refresh
 
 /**
  * Record snapshot for a single pool
@@ -93,10 +95,33 @@ async function recordSnapshotForPool(pool) {
     console.log('📤 Transaction sent:', tx.hash);
     console.log('⏳ Waiting for confirmation...');
     
-    const receipt = await tx.wait();
-    console.log('✅ Transaction confirmed!');
-    console.log('   Block:', receipt.blockNumber);
-    console.log('   Gas used:', receipt.gasUsed.toString());
+    // Get old record count before transaction
+    const oldRecordCount = await contract.recordCount();
+    
+    // Try to wait for receipt, but handle rate limit gracefully
+    let receipt = null;
+    try {
+      receipt = await tx.wait();
+      console.log('✅ Transaction confirmed!');
+      console.log('   Block:', receipt.blockNumber);
+      console.log('   Gas used:', receipt.gasUsed.toString());
+    } catch (waitError) {
+      // If rate limited, check if transaction actually succeeded by checking recordCount
+      if (waitError.message && waitError.message.includes('rate limit')) {
+        console.log('⚠️  Rate limit when checking receipt, verifying transaction status...');
+        // Wait a bit then check if recordCount increased
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        const newRecordCount = await contract.recordCount();
+        if (newRecordCount > oldRecordCount) {
+          console.log('✅ Transaction confirmed (verified via recordCount)!');
+          receipt = { blockNumber: 'unknown', gasUsed: 'unknown' }; // Placeholder
+        } else {
+          throw waitError; // Re-throw if transaction didn't succeed
+        }
+      } else {
+        throw waitError; // Re-throw other errors
+      }
+    }
     
     // Get snapshot data
     const newRecordCount = await contract.recordCount();
@@ -214,6 +239,8 @@ async function runKeeperService() {
   let pools;
   try {
     pools = await getAllPoolsToMonitor();
+    poolsCache = pools; // Cache for refresh
+    lastPoolsRefresh = Date.now();
   } catch (error) {
     console.error('❌ Error getting pools:', error.message);
     console.error('💡 Check your .env file:');
@@ -278,10 +305,26 @@ async function runKeeperService() {
     
     const now = Date.now();
     
+    // Refresh pools list periodically (every 5 minutes) to detect new pools
+    const POOLS_REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+    if (now - lastPoolsRefresh > POOLS_REFRESH_INTERVAL) {
+      try {
+        const newPools = await getAllPoolsToMonitor();
+        if (newPools.length !== poolsCache.length) {
+          console.log(`\n🔄 Pools list updated: ${poolsCache.length} → ${newPools.length} pools`);
+          poolsCache = newPools;
+        }
+        lastPoolsRefresh = now;
+      } catch (error) {
+        console.error('⚠️  Failed to refresh pools list:', error.message);
+        // Continue with existing pools list
+      }
+    }
+    
     // Check if we should record (at target minutes: 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55)
     if (shouldRecordNow()) {
-      // Record snapshot for each pool
-      for (const pool of pools) {
+      // Record snapshot for each pool (use cached pools which may have been refreshed)
+      for (const pool of poolsCache) {
         const poolKey = pool.poolId.toString();
         const lastRecord = lastRecordTime[poolKey] || 0;
         

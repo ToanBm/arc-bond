@@ -304,15 +304,18 @@ export function formatTimestamp(timestamp) {
 
 /**
  * Calculate time left until next record
+ * Contract checks: block.timestamp >= nextRecordTime
+ * Add 2 second buffer to account for transaction processing time
  */
 export function getTimeLeft(nextRecordTime) {
   const now = Math.floor(Date.now() / 1000);
   const timeLeft = Number(nextRecordTime) - now;
+  const BUFFER_SECONDS = 2; // Buffer to account for transaction processing time
   
   return {
     seconds: timeLeft,
     hours: timeLeft / 3600,
-    canRecord: timeLeft <= 0
+    canRecord: timeLeft <= -BUFFER_SECONDS // Need at least 2 seconds buffer before contract check
   };
 }
 

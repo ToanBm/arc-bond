@@ -124,12 +124,12 @@ export default function RedeemCard() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Select Pool
             </label>
-            <div className="flex gap-4">
+            <div className="flex gap-4 items-stretch">
               {/* Select Pool - Left (50%) */}
               <select
                 value={selectedRedeemPoolId || maturePools[0]?.poolId || ""}
                 onChange={(e) => setSelectedRedeemPoolId(e.target.value)}
-                className="flex-1 px-3 py-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]"
               >
                 {maturePools.map((pool) => (
                   <option key={pool.poolId} value={pool.poolId}>
@@ -140,7 +140,7 @@ export default function RedeemCard() {
 
               {/* Redeemable - Right (50%) */}
               {selectedRedeemPool && (
-                <div className="flex-1 bg-gray-50 border border-custom rounded-lg p-4 text-center flex items-center justify-center">
+                <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-3 py-2 text-center flex items-center justify-center h-[42px]">
                   <div className="text-sm text-gray-600">
                     Redeemable: <span className="font-semibold">{selectedRedeemPool.redeemableAmount} USDC</span>
                   </div>
