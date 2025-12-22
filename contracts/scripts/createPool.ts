@@ -19,7 +19,7 @@ async function main() {
   if (!addresses.BondFactory) {
     throw new Error("BondFactory address not found. Please deploy factory first.");
   }
-  
+
   const BondFactory = await ethers.getContractFactory("BondFactory");
   const bondFactory = BondFactory.attach(addresses.BondFactory);
   console.log("1️⃣ BondFactory:", addresses.BondFactory);
@@ -28,8 +28,8 @@ async function main() {
   // ==================== 2. Get Pool Parameters ====================
   // You can modify these parameters
   const poolName = process.env.POOL_NAME || "Bond 1";
-  const keeperAddress = process.env.KEEPER_ADDRESS || deployer.address;
-  const maturityMinutes = process.env.MATURITY_MINUTES ? parseInt(process.env.MATURITY_MINUTES) : 15; // 15 minutes default for testing
+  const keeperAddress = process.env.KEEPER_ADDRESS || "0x7A6b18979a03d15DCBd5bB68E437aF61b0BD5C1d";
+  const maturityMinutes = process.env.MATURITY_MINUTES ? parseInt(process.env.MATURITY_MINUTES) : 10080; // 1 week default
 
   console.log("2️⃣ Pool Parameters:");
   console.log("   Name:          ", poolName);
@@ -46,7 +46,7 @@ async function main() {
     maturityMinutes
   );
   console.log("   Transaction:", tx.hash);
-  
+
   const receipt = await tx.wait();
   console.log("   Block:", receipt?.blockNumber);
   console.log("");
@@ -55,7 +55,7 @@ async function main() {
   const poolCount = await bondFactory.poolCount();
   console.log("4️⃣ New pool created!");
   console.log("   Pool ID:", poolCount.toString());
-  
+
   const poolInfo = await bondFactory.getPool(poolCount);
   console.log("   BondToken:   ", poolInfo.bondToken);
   console.log("   BondSeries:  ", poolInfo.bondSeries);
@@ -67,11 +67,11 @@ async function main() {
   console.log("5️⃣ Updating deployment file...");
   const deploymentPath = path.join(__dirname, "../deployments/bond-factory.json");
   const deploymentData = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
-  
+
   if (!deploymentData[chainId.toString()].contracts.pools) {
     deploymentData[chainId.toString()].contracts.pools = {};
   }
-  
+
   deploymentData[chainId.toString()].contracts.pools[poolCount.toString()] = {
     poolId: poolCount.toString(),
     name: poolInfo.name,
@@ -82,15 +82,15 @@ async function main() {
     createdAt: poolInfo.createdAt.toString(),
     isActive: poolInfo.isActive
   };
-  
+
   fs.writeFileSync(deploymentPath, JSON.stringify(deploymentData, null, 2));
   console.log("✅ Deployment file updated");
   console.log("");
 
   // ==================== Summary ====================
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log("🎉 Pool Created Successfully!");
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log("");
   console.log("📋 Pool Details:");
   console.log("   Pool ID:      ", poolCount.toString());

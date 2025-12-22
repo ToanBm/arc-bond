@@ -1,5 +1,5 @@
 import { useAccount } from 'wagmi';
-import { useReadContract, useReadContracts } from 'wagmi';
+import { useReadContracts } from 'wagmi';
 import { formatUnits } from 'viem';
 import { ABIs } from '@/abi/contracts';
 import { useAllPools } from './useBondFactory';
@@ -27,10 +27,11 @@ export function useMaturePools() {
   const { address } = useAccount();
   const chainId = useChainId();
   const { data: allPools } = useAllPools();
-  
+
   // Convert contract pools to array format
   const poolsArray = useMemo(() => {
     if (!allPools || !Array.isArray(allPools)) return [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return allPools.map((pool: any, index: number) => ({
       poolId: pool.poolId?.toString() || (index + 1).toString(),
       name: pool.name || "",
@@ -68,7 +69,8 @@ export function useMaturePools() {
   // Prepare contract calls for balance and maturity date
   const contractCalls = useMemo(() => {
     if (!address || allPoolsWithLegacy.length === 0) return [];
-    
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const calls: any[] = [];
     allPoolsWithLegacy.forEach((pool) => {
       // Balance query (always)
@@ -93,7 +95,7 @@ export function useMaturePools() {
   // Query all balances and maturity dates
   const { data: contractResults } = useReadContracts({
     contracts: contractCalls,
-    query: { 
+    query: {
       enabled: contractCalls.length > 0,
       refetchInterval: 30000, // Refetch every 30s as backup
     },
@@ -102,17 +104,17 @@ export function useMaturePools() {
   // Process results
   const maturePools = useMemo(() => {
     if (!address || !contractResults || allPoolsWithLegacy.length === 0) return [];
-    
+
     const now = Math.floor(Date.now() / 1000);
     const results: MaturePoolInfo[] = [];
     let resultIndex = 0;
-    
+
     allPoolsWithLegacy.forEach((pool) => {
       // Get balance (every pool has balance query)
       const balanceResult = contractResults[resultIndex];
       const balance = balanceResult?.result as bigint | undefined;
       resultIndex++;
-      
+
       // Get maturity date
       let maturityDate = pool.maturityDate;
       if (pool.poolId === "legacy") {
@@ -121,12 +123,12 @@ export function useMaturePools() {
         maturityDate = maturityResult?.result ? Number(maturityResult.result) : 0;
         resultIndex++;
       }
-      
+
       const isMature = maturityDate > 0 && now >= maturityDate;
       const balanceRaw = balance || BigInt(0);
       const balanceFormatted = balanceRaw ? formatUnits(balanceRaw, 6) : '0';
       const redeemableAmount = balanceRaw ? formatUnits(balanceRaw / BigInt(10), 6) : '0';
-      
+
       // Only include pools that are mature AND have balance > 0
       if (isMature && balanceRaw > BigInt(0)) {
         results.push({
@@ -143,7 +145,7 @@ export function useMaturePools() {
         });
       }
     });
-    
+
     return results;
   }, [address, contractResults, allPoolsWithLegacy]);
 

@@ -9,6 +9,7 @@
     "snapshot": "node src/snapshot.js",
     "monitor": "node src/monitor.js",
     "keeper": "node src/keeper-15min.js",
+    "keeper-daily": "node src/keeper-daily.js",
     "test": "node src/test.js"
   },
   "keywords": [

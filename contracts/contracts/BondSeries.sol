@@ -26,7 +26,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     uint256 public constant COUPON_PER_TOKEN_PER_DAY = 0.001e6; // 0.001 USDC in 6 decimals (match USDC)
     uint256 public constant RESERVE_RATIO = 30; // 30% reserve
     uint256 public constant DEFAULT_GRACE_PERIOD = 3 days;
-    uint256 public constant SNAPSHOT_INTERVAL = 5 minutes; // Testing: 5 minutes
+    uint256 public constant SNAPSHOT_INTERVAL = 1 days; // Daily
     uint256 public constant PRECISION = 1e6; // Match USDC decimals for zero precision loss
     uint256 public constant MAX_CAP = 10_000e6; // 10,000 USDC cap
 
@@ -106,7 +106,10 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         
         // Initialize snapshot timing
         lastRecordTime = block.timestamp;
-        nextRecordTime = block.timestamp + SNAPSHOT_INTERVAL;
+        
+        // Align to next 00:00 UTC
+        // Example: if now is 10:00, (10:00 / 1 days) = 0. (0 + 1) * 1 days = 24:00 (Next Midnight)
+        nextRecordTime = ((block.timestamp / 1 days) + 1) * 1 days;
     }
     
     // ==================== USER FUNCTIONS ====================
@@ -235,7 +238,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         });
         
         lastRecordTime = block.timestamp;
-        nextRecordTime = block.timestamp + SNAPSHOT_INTERVAL;
+        nextRecordTime += SNAPSHOT_INTERVAL;
         
         emit SnapshotRecorded(recordCount, totalSupply, treasuryBalance, block.timestamp);
         

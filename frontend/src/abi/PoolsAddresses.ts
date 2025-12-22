@@ -22,10 +22,10 @@ export const PoolsAddresses = {
       poolId: "1",
       name: "Bond 1",
       symbol: "arcUSDC",
-      bondToken: "0xfD6889438570fFe23275993293f41b524126eE7F" as const,
-      bondSeries: "0x2BB213E558E4b582261Ae978b2cddc8928e9468d" as const,
-      maturityDate: "1766392320",
-      createdAt: "1766391420",
+      bondToken: "0x9C799b5F70d398De788b3e1456639c996D57E47b" as const,
+      bondSeries: "0x8DF45482fD2Ec82a4E23127FBbf55a6b69EDF781" as const,
+      maturityDate: "1767022154",
+      createdAt: "1766417354",
       isActive: true
     }
     }

@@ -2,7 +2,7 @@
   "5042002": {
     "chainId": 5042002,
     "chainName": "arc",
-    "deployedAt": "2025-12-22T08:16:02.595Z",
+    "deployedAt": "2025-12-22T15:28:50.413Z",
     "contracts": {
       "USDC": {
         "address": "0x3600000000000000000000000000000000000000",
@@ -11,17 +11,17 @@
         "symbol": "USDC"
       },
       "BondFactory": {
-        "address": "0x44D4fc306B1cefe1108FdDD8BfF9994Eef4e7eA6"
+        "address": "0x88b1B2e3D93eC6AECa6818E904852cE6c3b80759"
       },
       "pools": {
         "1": {
           "poolId": "1",
           "name": "Bond 1",
           "symbol": "arcUSDC",
-          "bondToken": "0xfD6889438570fFe23275993293f41b524126eE7F",
-          "bondSeries": "0x2BB213E558E4b582261Ae978b2cddc8928e9468d",
-          "maturityDate": "1766392320",
-          "createdAt": "1766391420",
+          "bondToken": "0x9C799b5F70d398De788b3e1456639c996D57E47b",
+          "bondSeries": "0x8DF45482fD2Ec82a4E23127FBbf55a6b69EDF781",
+          "maturityDate": "1767022154",
+          "createdAt": "1766417354",
           "isActive": true
         }
       }

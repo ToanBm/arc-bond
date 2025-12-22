@@ -11,7 +11,7 @@ module.exports = {
   apps: [
     {
       name: 'arcbond-keeper',
-      script: 'src/keeper-15min.js', // Changed from index.js to keeper-15min.js
+      script: 'src/keeper-daily.js', // Updated to Daily Keeper
       instances: 1,
       autorestart: true,
       watch: false,

@@ -17,6 +17,7 @@ type PoolContextType = {
 const PoolContext = createContext<PoolContextType | undefined>(undefined);
 
 // Convert contract PoolInfo to frontend PoolInfo format
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function convertContractPoolToPoolInfo(contractPool: any, poolId: string): PoolInfo {
   return {
     poolId: poolId,
@@ -33,10 +34,10 @@ function convertContractPoolToPoolInfo(contractPool: any, poolId: string): PoolI
 export function PoolProvider({ children }: { children: ReactNode }) {
   const chainId = useChainId();
   const [selectedPoolId, setSelectedPoolIdState] = useState<string | null>(null);
-  
+
   // Query pools from contract (real-time)
   const { data: contractPools, refetch: refetchPools } = useAllPools();
-  
+
   // Convert contract pools to PoolInfo format
   const contractPoolsMap = useMemo(() => {
     if (!contractPools || !Array.isArray(contractPools)) {
@@ -45,6 +46,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     }
     const map: Record<string, PoolInfo> = {};
     console.log("[PoolContext] Raw contractPools:", contractPools);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     contractPools.forEach((pool: any, index: number) => {
       const poolId = pool.poolId?.toString() || (index + 1).toString();
       map[poolId] = convertContractPoolToPoolInfo(pool, poolId);
@@ -58,7 +60,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     console.log("[PoolContext] contractPoolsMap:", Object.keys(map));
     return map;
   }, [contractPools]);
-  
+
   // Fallback: Get pools from file (if contract query fails)
   const filePoolIds: string[] = useMemo(() => {
     try {
@@ -67,11 +69,11 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       return [];
     }
   }, [chainId]);
-  
+
   // Combine pool IDs: factory pools first (newest first)
   const poolIds = useMemo(() => {
     const ids: string[] = [];
-    
+
     // Add contract pools first (real-time, sorted by poolId descending - newest first)
     const contractPoolIds = Object.keys(contractPoolsMap).sort((a, b) => {
       const aNum = parseInt(a) || 0;
@@ -79,22 +81,22 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       return bNum - aNum; // Descending: newest first
     });
     ids.push(...contractPoolIds);
-    
+
     // Add file pools that aren't already in contract pools
     filePoolIds.forEach(id => {
       if (!ids.includes(id)) {
         ids.push(id);
       }
     });
-    
+
     console.log("[PoolContext] Final poolIds:", ids);
     return ids;
   }, [contractPoolsMap, filePoolIds]);
-  
+
   // Get default pool (newest factory pool first)
   const defaultPool: PoolInfo | null = useMemo(() => {
     if (chainId !== ARC_TESTNET_CHAIN_ID) return null;
-    
+
     // Try contract pools first (newest first)
     const contractPoolIds = Object.keys(contractPoolsMap).sort((a, b) => {
       const aNum = parseInt(a) || 0;
@@ -106,15 +108,15 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       console.log("[PoolContext] Default pool (newest):", contractPoolIds[0], newestPool);
       return newestPool || null;
     }
-    
+
     // Fallback to file pools
     if (filePoolIds.length > 0) {
       return getPool(chainId, filePoolIds[0]) || null;
     }
-    
+
     return null;
   }, [chainId, contractPoolsMap, filePoolIds]);
-  
+
   // Expose refetch function for manual refresh (e.g., after creating new pool)
   useEffect(() => {
     // Auto-refetch pools every 30 seconds to catch new pools
@@ -123,7 +125,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     }, 30000);
     return () => clearInterval(interval);
   }, [refetchPools]);
-  
+
   // Initialize selected pool when chain or pools change
   useEffect(() => {
     if (chainId === ARC_TESTNET_CHAIN_ID && poolIds.length > 0) {
@@ -137,6 +139,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       setSelectedPoolIdState(null);
       localStorage.removeItem("selectedPoolId");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chainId, poolIds.join(",")]);
 
   const setSelectedPoolId = (poolId: string | null) => {
@@ -154,7 +157,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       console.log("[PoolContext] No selectedPoolId or wrong chain, using defaultPool:", defaultPool);
       return defaultPool;
     }
-    
+
     // Try contract pools first (real-time)
     if (contractPoolsMap[selectedPoolId]) {
       const pool = contractPoolsMap[selectedPoolId];
@@ -165,7 +168,7 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       });
       return pool;
     }
-    
+
     // Fallback to file pools
     const filePool = getPool(chainId, selectedPoolId);
     if (filePool) {
@@ -175,16 +178,16 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       });
       return filePool;
     }
-    
+
     console.log(`[PoolContext] Pool ${selectedPoolId} not found, using defaultPool:`, defaultPool);
     return defaultPool;
   }, [selectedPoolId, chainId, contractPoolsMap, defaultPool]);
 
   return (
-    <PoolContext.Provider value={{ 
-      selectedPoolId: selectedPoolId || poolIds[0] || null, 
-      selectedPool, 
-      setSelectedPoolId, 
+    <PoolContext.Provider value={{
+      selectedPoolId: selectedPoolId || poolIds[0] || null,
+      selectedPool,
+      setSelectedPoolId,
       poolIds,
       refetchPools
     }}>

@@ -37,19 +37,19 @@ export default function CreatePoolCard() {
       const refreshInterval = setInterval(() => {
         refetchPools();
       }, 2000);
-      
+
       // Stop after 10 seconds (5 attempts)
       setTimeout(() => {
         clearInterval(refreshInterval);
       }, 10000);
-      
+
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Pool created successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${hash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -119,7 +119,7 @@ export default function CreatePoolCard() {
       <div className="card">
         <h3 className="text-lg font-bold mb-4 text-gray-900">🏊 Create New Pool</h3>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-gray-700">
-          ❌ You don't have POOL_CREATOR_ROLE. Contact admin to grant permission.
+          ❌ You don&apos;t have POOL_CREATOR_ROLE. Contact admin to grant permission.
         </div>
       </div>
     );
