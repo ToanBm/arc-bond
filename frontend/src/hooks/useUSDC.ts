@@ -1,8 +1,9 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
 import { ABIs, getContractAddresses } from '@/abi/contracts';
 import { parseUnits } from 'viem';
 import { usePool } from '@/contexts/PoolContext';
-import { useMemo } from 'react';
 
 const { usdc: USDC_ADDRESS } = getContractAddresses();
 
@@ -23,6 +24,9 @@ export function useUSDCBalance(address?: `0x${string}`) {
     abi: ABIs.USDC,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
+    query: {
+      refetchInterval: 30000, // Refetch every 30s as backup
+    },
   });
 }
 
@@ -34,7 +38,10 @@ export function useUSDCAllowance(ownerAddress?: `0x${string}`) {
     abi: ABIs.USDC,
     functionName: 'allowance',
     args: ownerAddress && bondSeriesAddress ? [ownerAddress, bondSeriesAddress] : undefined,
-    query: { enabled: !!ownerAddress && !!bondSeriesAddress },
+    query: { 
+      enabled: !!ownerAddress && !!bondSeriesAddress,
+      refetchInterval: 30000, // Refetch every 30s as backup
+    },
   });
 }
 
@@ -63,8 +70,16 @@ export function useUSDCSymbol() {
 // Approve BondSeries to spend USDC
 export function useApproveUSDC() {
   const bondSeriesAddress = useBondSeriesAddressForAllowance();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful approve
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const approve = (amount: string) => {
     if (!bondSeriesAddress) return;

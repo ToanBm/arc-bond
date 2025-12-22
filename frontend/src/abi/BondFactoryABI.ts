@@ -58,11 +58,6 @@ export const BondFactoryABI = {
     },
     {
       "inputs": [],
-      "name": "InvalidSymbol",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "PoolNotFound",
       "type": "error"
     },
@@ -218,18 +213,13 @@ export const BondFactoryABI = {
           "type": "string"
         },
         {
-          "internalType": "string",
-          "name": "symbol_",
-          "type": "string"
-        },
-        {
           "internalType": "address",
           "name": "keeper_",
           "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "maturityHours_",
+          "name": "maturityMinutes_",
           "type": "uint256"
         }
       ],

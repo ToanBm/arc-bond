@@ -21,7 +21,10 @@ export function useBondTokenBalance(address?: `0x${string}`) {
     abi: ABIs.BondToken,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
-    query: { enabled: !!bondTokenAddress && !!address },
+    query: { 
+      enabled: !!bondTokenAddress && !!address,
+      refetchInterval: 30000, // Refetch every 30s as backup
+    },
   });
 }
 

@@ -19,24 +19,42 @@ if (!fs.existsSync(outdir)) {
 
 const line = "\n===================================================================\n";
 
-console.log("🔄 Generating ABIs for ArcBond System...");
+console.log("🔄 Generating ABIs for ArcBond System...\n");
 
 // ===================== Bond System =====================
 const bondSystemFile = path.join(deploymentsDir, "bond-system.json");
 const bondFactoryFile = path.join(deploymentsDir, "bond-factory.json");
 let bondSystemData = null;
 const hasBondSystem = fs.existsSync(bondSystemFile);
+const hasBondFactory = fs.existsSync(bondFactoryFile);
+
+// Detect mode
+if (hasBondSystem && hasBondFactory) {
+  console.log("📋 Detected: Both legacy and factory mode files exist");
+  console.log("   Using bond-system.json for ABIs");
+  console.log("   Will generate both legacy and factory address files\n");
+} else if (hasBondSystem) {
+  console.log("📋 Mode: Legacy (single pool)");
+  console.log("   Will generate BondSeriesAddresses & BondTokenAddresses\n");
+} else if (hasBondFactory) {
+  console.log("📋 Mode: Factory (multiple pools)");
+  console.log("   Will generate PoolsAddresses (use this for addresses)\n");
+} else {
+  console.error(`${line}❌ Neither bond-system.json nor bond-factory.json found!${line}`);
+  console.error("   Please deploy contracts first:");
+  console.error("   - Legacy: npx hardhat run scripts/deployBondSystem.ts --network arc");
+  console.error("   - Factory: npx hardhat run scripts/deployFactory.ts --network arc");
+  console.error(`${line}`);
+  process.exit(1);
+}
 
 // Try to load bond-system.json first, fallback to bond-factory.json for ABIs
 if (hasBondSystem) {
   bondSystemData = JSON.parse(fs.readFileSync(bondSystemFile, "utf-8"));
   console.log(`✅ Loaded bond-system.json`);
-} else if (fs.existsSync(bondFactoryFile)) {
+} else if (hasBondFactory) {
   bondSystemData = JSON.parse(fs.readFileSync(bondFactoryFile, "utf-8"));
-  console.log(`✅ Loaded bond-factory.json (fallback for ABIs)`);
-} else {
-  console.error(`${line}Neither bond-system.json nor bond-factory.json found!${line}`);
-  process.exit(1);
+  console.log(`✅ Loaded bond-factory.json (for ABIs)`);
 }
 
 // ===================== Generate BondSeriesABI =====================
@@ -181,8 +199,6 @@ fs.writeFileSync(path.join(outdir, "USDCAddresses.ts"), usdcAddresses, "utf-8");
 console.log(`✅ Generated USDCAddresses.ts`);
 
 // ===================== Generate BondFactory =====================
-const hasBondFactory = fs.existsSync(bondFactoryFile);
-
 if (hasBondFactory) {
   console.log("\n📝 Generating BondFactory...");
   
@@ -325,8 +341,10 @@ import { USDCAddresses, getUSDCAddress } from './USDCAddresses';
 ${hasBondFactoryGenerated ? `import { BondFactoryABI } from './BondFactoryABI';
 import { BondFactoryAddresses, getBondFactoryAddress } from './BondFactoryAddresses';` : ''}
 ${hasPools ? `import { PoolsAddresses, getPools, getPool, getAllPoolIds, type PoolInfo } from './PoolsAddresses';` : ''}
-${hasBondSeriesAddressesFile ? `import { BondSeriesAddresses, getBondSeriesAddress } from './BondSeriesAddresses';` : ''}
-${hasBondTokenAddressesFile ? `import { BondTokenAddresses, getBondTokenAddress } from './BondTokenAddresses';` : ''}
+${hasBondSeriesAddressesFile ? `import { BondSeriesAddresses, getBondSeriesAddress } from './BondSeriesAddresses';` : `// BondSeriesAddresses not available (factory-only mode)
+let getBondSeriesAddress: ((chainId: number) => \`0x\${string}\`) | null = null;`}
+${hasBondTokenAddressesFile ? `import { BondTokenAddresses, getBondTokenAddress } from './BondTokenAddresses';` : `// BondTokenAddresses not available (factory-only mode)
+let getBondTokenAddress: ((chainId: number) => \`0x\${string}\`) | null = null;`}
 
 // Export tất cả ABIs
 export const ABIs = {
@@ -351,10 +369,27 @@ export type { PoolInfo };` : ''}
 // Arc Testnet chain ID
 export const ARC_TESTNET_CHAIN_ID = 5042002;
 
+// Safe helper functions for legacy mode (return null if not available)
+export function getBondSeriesAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): \`0x\${string}\` | null {
+  ${hasBondSeriesAddressesFile ? `try {
+    return getBondSeriesAddress(chainId);
+  } catch {
+    return null;
+  }` : 'return null;'}
+}
+
+export function getBondTokenAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): \`0x\${string}\` | null {
+  ${hasBondTokenAddressesFile ? `try {
+    return getBondTokenAddress(chainId);
+  } catch {
+    return null;
+  }` : 'return null;'}
+}
+
 // Helper to get all addresses for current chain
 export function getContractAddresses(chainId: number = ARC_TESTNET_CHAIN_ID) {
   return {
-    usdc: getUSDCAddress(chainId),${hasBondFactoryGenerated ? '\n    bondFactory: getBondFactoryAddress(chainId),' : ''}${hasBondSeriesAddressesFile ? '\n    bondSeries: getBondSeriesAddress(chainId),' : ''}${hasBondTokenAddressesFile ? '\n    bondToken: getBondTokenAddress(chainId),' : ''}
+    usdc: getUSDCAddress(chainId),${hasBondFactoryGenerated ? '\n    bondFactory: getBondFactoryAddress(chainId),' : ''}${hasBondSeriesAddressesFile ? '\n    bondSeries: getBondSeriesAddress(chainId),' : '\n    bondSeries: getBondSeriesAddressSafe(chainId),'}${hasBondTokenAddressesFile ? '\n    bondToken: getBondTokenAddress(chainId),' : '\n    bondToken: getBondTokenAddressSafe(chainId),'}
   };
 }
 `;
@@ -362,24 +397,45 @@ export function getContractAddresses(chainId: number = ARC_TESTNET_CHAIN_ID) {
 fs.writeFileSync(path.join(outdir, "contracts.ts"), contractsTs, "utf-8");
 console.log(`✅ Generated contracts.ts (tổng hợp)`);
 
+// ===================== Cleanup unused files =====================
+// Remove files that shouldn't exist based on current mode
+const filesToCheck = [
+  { file: "BondSeriesAddresses.ts", shouldExist: hasBondSystem, reason: "Only needed for legacy mode (bond-system.json)" },
+  { file: "BondTokenAddresses.ts", shouldExist: hasBondSystem, reason: "Only needed for legacy mode (bond-system.json)" },
+];
+
+for (const { file, shouldExist, reason } of filesToCheck) {
+  const filePath = path.join(outdir, file);
+  if (fs.existsSync(filePath) && !shouldExist) {
+    fs.unlinkSync(filePath);
+    console.log(`🗑️  Removed ${file} (${reason})`);
+  }
+}
+
 // ===================== Summary =====================
 console.log(`\n${line}🎉 All done! Generated files:${line}`);
-console.log(`   ✅ BondSeriesABI.ts`);
+console.log(`   ✅ BondSeriesABI.ts (always)`);
 if (hasBondSystem) {
-  console.log(`   ✅ BondSeriesAddresses.ts`);
+  console.log(`   ✅ BondSeriesAddresses.ts (legacy mode)`);
+} else {
+  console.log(`   ⏭️  BondSeriesAddresses.ts (skipped - use PoolsAddresses instead)`);
 }
-console.log(`   ✅ BondTokenABI.ts`);
+console.log(`   ✅ BondTokenABI.ts (always)`);
 if (hasBondSystem) {
-  console.log(`   ✅ BondTokenAddresses.ts`);
+  console.log(`   ✅ BondTokenAddresses.ts (legacy mode)`);
+} else {
+  console.log(`   ⏭️  BondTokenAddresses.ts (skipped - use PoolsAddresses instead)`);
 }
-console.log(`   ✅ USDCABI.ts`);
-console.log(`   ✅ USDCAddresses.ts`);
+console.log(`   ✅ USDCABI.ts (always)`);
+console.log(`   ✅ USDCAddresses.ts (always)`);
 if (hasBondFactoryGenerated) {
-  console.log(`   ✅ BondFactoryABI.ts`);
-  console.log(`   ✅ BondFactoryAddresses.ts`);
+  console.log(`   ✅ BondFactoryABI.ts (factory mode)`);
+  console.log(`   ✅ BondFactoryAddresses.ts (factory mode)`);
   if (hasPools) {
-    console.log(`   ✅ PoolsAddresses.ts`);
+    console.log(`   ✅ PoolsAddresses.ts (factory mode)`);
   }
+} else {
+  console.log(`   ⏭️  BondFactory files (skipped - bond-factory.json not found)`);
 }
 console.log(`   ✅ contracts.ts (tổng hợp)`);
 
@@ -396,3 +452,4 @@ console.log(`     abi: ABIs.BondSeries,`);
 console.log(`     functionName: 'getSeriesInfo'`);
 console.log(`   });`);
 console.log(`${line}`);
+

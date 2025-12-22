@@ -35,13 +35,13 @@ async function main() {
 
   // ==================== 3. Deploy BondSeries ====================
   console.log("3️⃣ Deploying BondSeries...");
-  const MATURITY_HOURS = 168; // 7 days (168 hours) for production
+  const MATURITY_MINUTES = 15; // 15 minutes for testing
   const BondSeries = await ethers.getContractFactory("BondSeries");
   const bondSeries = await BondSeries.deploy(
     bondTokenAddress,
     usdcAddress,
     deployer.address, // Keeper (can change later)
-    MATURITY_HOURS
+    MATURITY_MINUTES
   );
   await bondSeries.waitForDeployment();
   const bondSeriesAddress = await bondSeries.getAddress();
@@ -82,7 +82,7 @@ async function main() {
       },
       BondSeries: {
         address: bondSeriesAddress,
-        maturityHours: MATURITY_HOURS
+        maturityMinutes: MATURITY_MINUTES
       }
     }
   };
@@ -114,8 +114,8 @@ async function main() {
   console.log("   Mint Ratio:  1 USDC → 10 arcUSDC");
   console.log("   Decimals:    6 (arcUSDC) = 6 (USDC) - Zero precision loss!");
   console.log("   Coupon Rate: 1% per day (365% APY)");
-  console.log("   Snapshot:    Every 1 day (24 hours)");
-  console.log("   Maturity:    " + MATURITY_HOURS + " hours (7 days)");
+  console.log("   Snapshot:    Every 5 minutes (for testing)");
+  console.log("   Maturity:    " + MATURITY_MINUTES + " minutes");
   console.log("   Reserve:     30%");
   console.log("   Cap:         100,000 USDC");
   console.log("");

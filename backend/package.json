@@ -8,6 +8,7 @@
     "start": "node src/index.js",
     "snapshot": "node src/snapshot.js",
     "monitor": "node src/monitor.js",
+    "keeper": "node src/keeper-15min.js",
     "test": "node src/test.js"
   },
   "keywords": [

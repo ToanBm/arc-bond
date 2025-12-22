@@ -6,7 +6,7 @@ export const BondFactoryAddresses = {
   "5042002": {
     chainId: 5042002,
     chainName: "arc",
-    address: "0x1374E95C3867F7b54F3d2517e1C3a6Ba18c98eAd" as const
+    address: "0x44D4fc306B1cefe1108FdDD8BfF9994Eef4e7eA6" as const
   }
 } as const;
 

@@ -2,7 +2,7 @@
   "5042002": {
     "chainId": 5042002,
     "chainName": "arc",
-    "deployedAt": "2025-12-06T08:35:45.669Z",
+    "deployedAt": "2025-12-22T08:16:02.595Z",
     "contracts": {
       "USDC": {
         "address": "0x3600000000000000000000000000000000000000",
@@ -11,17 +11,17 @@
         "symbol": "USDC"
       },
       "BondFactory": {
-        "address": "0x1374E95C3867F7b54F3d2517e1C3a6Ba18c98eAd"
+        "address": "0x44D4fc306B1cefe1108FdDD8BfF9994Eef4e7eA6"
       },
       "pools": {
         "1": {
           "poolId": "1",
-          "name": "ArcBond USDC Series 1",
-          "symbol": "arcUSDC-1",
-          "bondToken": "0xCcBC116c212C3DB7a715e32Af5b009D2fccB1B7c",
-          "bondSeries": "0x73363003d9b5faa45b35A9877a24b1FF8bb65228",
-          "maturityDate": "1765615451",
-          "createdAt": "1765010651",
+          "name": "Bond 1",
+          "symbol": "arcUSDC",
+          "bondToken": "0xfD6889438570fFe23275993293f41b524126eE7F",
+          "bondSeries": "0x2BB213E558E4b582261Ae978b2cddc8928e9468d",
+          "maturityDate": "1766392320",
+          "createdAt": "1766391420",
           "isActive": true
         }
       }
@@ -713,7 +713,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "maturityHours_",
+            "name": "maturityMinutes_",
             "type": "uint256"
           }
         ],
@@ -1262,6 +1262,30 @@
         "type": "function"
       },
       {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "keeper",
+            "type": "address"
+          }
+        ],
+        "name": "canRecordSnapshot",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "canRecord",
+            "type": "bool"
+          },
+          {
+            "internalType": "string",
+            "name": "reason",
+            "type": "string"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
         "inputs": [],
         "name": "claimCoupon",
         "outputs": [
@@ -1429,6 +1453,45 @@
             "internalType": "bool",
             "name": "_emergencyMode",
             "type": "bool"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      },
+      {
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "keeper",
+            "type": "address"
+          }
+        ],
+        "name": "getSnapshotStatus",
+        "outputs": [
+          {
+            "internalType": "bool",
+            "name": "canRecordNow",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "hasKeeperRole",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "timeUntilNext",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "isPoolExpired",
+            "type": "bool"
+          },
+          {
+            "internalType": "uint256",
+            "name": "nextRecordTimestamp",
+            "type": "uint256"
           }
         ],
         "stateMutability": "view",
@@ -1795,11 +1858,6 @@
       },
       {
         "inputs": [],
-        "name": "InvalidSymbol",
-        "type": "error"
-      },
-      {
-        "inputs": [],
         "name": "PoolNotFound",
         "type": "error"
       },
@@ -1955,18 +2013,13 @@
             "type": "string"
           },
           {
-            "internalType": "string",
-            "name": "symbol_",
-            "type": "string"
-          },
-          {
             "internalType": "address",
             "name": "keeper_",
             "type": "address"
           },
           {
             "internalType": "uint256",
-            "name": "maturityHours_",
+            "name": "maturityMinutes_",
             "type": "uint256"
           }
         ],

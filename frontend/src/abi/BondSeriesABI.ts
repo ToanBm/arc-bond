@@ -23,7 +23,7 @@ export const BondSeriesABI = {
         },
         {
           "internalType": "uint256",
-          "name": "maturityHours_",
+          "name": "maturityMinutes_",
           "type": "uint256"
         }
       ],
@@ -572,6 +572,30 @@ export const BondSeriesABI = {
       "type": "function"
     },
     {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "keeper",
+          "type": "address"
+        }
+      ],
+      "name": "canRecordSnapshot",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "canRecord",
+          "type": "bool"
+        },
+        {
+          "internalType": "string",
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [],
       "name": "claimCoupon",
       "outputs": [
@@ -739,6 +763,45 @@ export const BondSeriesABI = {
           "internalType": "bool",
           "name": "_emergencyMode",
           "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "keeper",
+          "type": "address"
+        }
+      ],
+      "name": "getSnapshotStatus",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "canRecordNow",
+          "type": "bool"
+        },
+        {
+          "internalType": "bool",
+          "name": "hasKeeperRole",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeUntilNext",
+          "type": "uint256"
+        },
+        {
+          "internalType": "bool",
+          "name": "isPoolExpired",
+          "type": "bool"
+        },
+        {
+          "internalType": "uint256",
+          "name": "nextRecordTimestamp",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",

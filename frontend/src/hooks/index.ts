@@ -60,3 +60,18 @@ export {
 // Bridge hooks
 export { useBridge, type SupportedChain } from './useBridge';
 
+// BondFactory hooks
+export {
+  useCreatePool,
+  useIsPoolCreator,
+  usePoolCount,
+  useAllPools,
+  usePoolById,
+} from './useBondFactory';
+
+// Mature pools hooks
+export {
+  useMaturePools,
+  type MaturePoolInfo,
+} from './useMaturePools';
+

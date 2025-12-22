@@ -40,6 +40,10 @@ export const BOND_SERIES_ABI = [
   "function snapshots(uint256) external view returns (uint256 recordId, uint256 timestamp, uint256 totalSupply, uint256 treasuryBalance)",
   "function lastDistributedRecord() external view returns (uint256)",
   "function getSeriesInfo() external view returns (uint256 maturityDate, uint256 totalDeposited, uint256 totalSupply, uint256 recordCount, uint256 cumulativeCouponIndex, bool emergencyMode)",
+  "function canRecordSnapshot(address keeper) external view returns (bool canRecord, string memory reason)",
+  "function getSnapshotStatus(address keeper) external view returns (bool canRecordNow, bool hasKeeperRole, uint256 timeUntilNext, bool isPoolExpired, uint256 nextRecordTimestamp)",
+  "function hasRole(bytes32 role, address account) external view returns (bool)",
+  "function KEEPER_ROLE() external view returns (bytes32)",
   
   // Events
   "event SnapshotRecorded(uint256 indexed recordId, uint256 totalSupply, uint256 treasuryBalance, uint256 timestamp)",

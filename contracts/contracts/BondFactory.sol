@@ -56,7 +56,6 @@ contract BondFactory is AccessControl {
     error InvalidMaturityHours();
     error PoolNotFound();
     error InvalidName();
-    error InvalidSymbol();
     
     // ==================== CONSTRUCTOR ====================
     
@@ -80,31 +79,32 @@ contract BondFactory is AccessControl {
     
     /**
      * @notice Create a new bond pool
-     * @param name_ BondToken name (e.g., "ArcBond USDC Series 1")
-     * @param symbol_ BondToken symbol (e.g., "arcUSDC-1")
+     * @param name_ BondToken name (e.g., "Bond 1")
      * @param keeper_ Keeper address for BondSeries
-     * @param maturityHours_ Number of hours until maturity
+     * @param maturityMinutes_ Number of minutes until maturity
      * @return poolId The ID of the newly created pool
      * @return bondToken Address of the deployed BondToken
      * @return bondSeries Address of the deployed BondSeries
+     * @dev Symbol is always "arcUSDC" (hardcoded in contract)
      */
     function createPool(
         string memory name_,
-        string memory symbol_,
         address keeper_,
-        uint256 maturityHours_
+        uint256 maturityMinutes_
     ) external onlyRole(POOL_CREATOR_ROLE) returns (
         uint256 poolId,
         address bondToken,
         address bondSeries
     ) {
         if (bytes(name_).length == 0) revert InvalidName();
-        if (bytes(symbol_).length == 0) revert InvalidSymbol();
         if (keeper_ == address(0)) revert InvalidAddress();
-        if (maturityHours_ == 0) revert InvalidMaturityHours();
+        if (maturityMinutes_ == 0) revert InvalidMaturityHours();
         
         poolCount++;
         poolId = poolCount;
+        
+        // Always use "arcUSDC" as symbol
+        string memory symbol_ = "arcUSDC";
         
         // Deploy BondToken (Factory is temporary owner)
         BondToken newBondToken = new BondToken(
@@ -119,7 +119,7 @@ contract BondFactory is AccessControl {
             bondToken,
             usdc,
             keeper_,
-            maturityHours_
+            maturityMinutes_
         );
         bondSeries = address(newBondSeries);
         
@@ -127,7 +127,7 @@ contract BondFactory is AccessControl {
         BondToken(bondToken).transferOwnership(bondSeries);
         
         // Calculate maturity date
-        uint256 maturityDate = block.timestamp + (maturityHours_ * 1 hours);
+        uint256 maturityDate = block.timestamp + (maturityMinutes_ * 1 minutes);
         
         // Store pool info
         pools[poolId] = PoolInfo({

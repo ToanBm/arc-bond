@@ -1,8 +1,10 @@
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { ABIs } from '@/abi/contracts';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo } from 'react';
+import { ABIs, getBondFactoryAddress, ARC_TESTNET_CHAIN_ID } from '@/abi/contracts';
 import { parseUnits } from 'viem';
 import { usePool } from '@/contexts/PoolContext';
-import { useMemo } from 'react';
+import { useChainId } from 'wagmi';
 
 // Helper to get BondSeries address from pool
 function useBondSeriesAddress() {
@@ -21,7 +23,10 @@ export function useBondSeriesInfo() {
     address: bondSeriesAddress,
     abi: ABIs.BondSeries,
     functionName: 'getSeriesInfo',
-    query: { enabled: !!bondSeriesAddress },
+    query: { 
+      enabled: !!bondSeriesAddress,
+      refetchInterval: 30000, // Refetch every 30s as backup
+    },
   });
 }
 
@@ -66,7 +71,10 @@ export function useClaimableAmount(address?: `0x${string}`) {
     abi: ABIs.BondSeries,
     functionName: 'claimableAmount',
     args: address ? [address] : undefined,
-    query: { enabled: !!bondSeriesAddress && !!address },
+    query: { 
+      enabled: !!bondSeriesAddress && !!address,
+      refetchInterval: 30000, // Refetch every 30s as backup
+    },
   });
 }
 
@@ -104,16 +112,24 @@ export function useEmergencyRedeemEnabled() {
 }
 
 // Check if address has DEFAULT_ADMIN_ROLE
+// With Factory pattern, check role on Factory (admin role is on Factory, not BondSeries)
 export function useIsAdmin(address?: `0x${string}`) {
-  const bondSeriesAddress = useBondSeriesAddress();
+  const chainId = useChainId();
   const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
   
+  let factoryAddress: `0x${string}` | undefined;
+  try {
+    factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
+  } catch {
+    factoryAddress = undefined;
+  }
+  
   return useReadContract({
-    address: bondSeriesAddress,
-    abi: ABIs.BondSeries,
+    address: factoryAddress,
+    abi: ABIs.BondFactory,
     functionName: 'hasRole',
     args: address ? [DEFAULT_ADMIN_ROLE, address] : undefined,
-    query: { enabled: !!bondSeriesAddress && !!address },
+    query: { enabled: !!factoryAddress && !!address },
   });
 }
 
@@ -124,8 +140,16 @@ export function useIsAdmin(address?: `0x${string}`) {
 // Deposit USDC to receive arcUSDC
 export function useDeposit() {
   const bondSeriesAddress = useBondSeriesAddress();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful deposit
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const deposit = (usdcAmount: string) => {
     if (!bondSeriesAddress) return;
@@ -150,8 +174,16 @@ export function useDeposit() {
 // Claim coupon
 export function useClaimCoupon() {
   const bondSeriesAddress = useBondSeriesAddress();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful claim
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const claimCoupon = () => {
     if (!bondSeriesAddress) return;
@@ -173,15 +205,25 @@ export function useClaimCoupon() {
 }
 
 // Redeem arcUSDC for USDC at maturity
-export function useRedeem() {
-  const bondSeriesAddress = useBondSeriesAddress();
+export function useRedeem(bondSeriesAddress?: `0x${string}`) {
+  const defaultBondSeriesAddress = useBondSeriesAddress();
+  const targetAddress = bondSeriesAddress || defaultBondSeriesAddress;
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
+  // Invalidate queries immediately after successful redeem
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+      queryClient.invalidateQueries({ queryKey: ['readContracts'] }); // Also invalidate useReadContracts
+    }
+  }, [isSuccess, hash, queryClient]);
+
   const redeem = (bondAmount: string) => {
-    if (!bondSeriesAddress) return;
+    if (!targetAddress) return;
     writeContract({
-      address: bondSeriesAddress,
+      address: targetAddress,
       abi: ABIs.BondSeries,
       functionName: 'redeem',
       args: [parseUnits(bondAmount, 6)], // arcUSDC 6 decimals
@@ -205,8 +247,16 @@ export function useRedeem() {
 // Record snapshot (Keeper only)
 export function useRecordSnapshot() {
   const bondSeriesAddress = useBondSeriesAddress();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful snapshot
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const recordSnapshot = () => {
     if (!bondSeriesAddress) return;
@@ -230,8 +280,16 @@ export function useRecordSnapshot() {
 // Distribute coupon (Owner only)
 export function useDistributeCoupon() {
   const bondSeriesAddress = useBondSeriesAddress();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful distribution
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const distributeCoupon = (amount: string) => {
     if (!bondSeriesAddress) return;
@@ -256,8 +314,16 @@ export function useDistributeCoupon() {
 // Owner withdraw
 export function useOwnerWithdraw() {
   const bondSeriesAddress = useBondSeriesAddress();
+  const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  // Invalidate queries immediately after successful withdraw
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
 
   const ownerWithdraw = (amount: string) => {
     if (!bondSeriesAddress) return;

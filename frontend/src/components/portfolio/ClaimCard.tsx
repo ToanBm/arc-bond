@@ -6,15 +6,19 @@ import { useClaimCoupon } from "@/hooks/useBondSeries";
 import toast from "react-hot-toast";
 
 export default function ClaimCard() {
-  const { claimableAmount, isConnected } = usePortfolioData();
+  const { claimableAmount, usdcBalance, isConnected } = usePortfolioData();
   const { claimCoupon, isPending, isSuccess, hash } = useClaimCoupon();
+
+  // Format amounts to 2 decimal places
+  const formattedClaimable = parseFloat(claimableAmount || "0").toFixed(2);
+  const formattedClaimed = parseFloat(usdcBalance || "0").toFixed(2);
 
   // Show success toast
   useEffect(() => {
     if (isSuccess && hash) {
       toast.success(
         <div className="flex flex-col gap-1">
-          <div>✅ Claimed {claimableAmount} USDC successfully!</div>
+          <div>✅ Claimed {formattedClaimable} USDC successfully!</div>
           <a 
             href={`https://testnet.arcscan.app/tx/${hash}`} 
             target="_blank" 
@@ -27,7 +31,7 @@ export default function ClaimCard() {
       );
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuccess, hash]);
+  }, [isSuccess, hash, formattedClaimable]);
 
   const handleClaim = () => {
     toast.loading("Claiming coupon...");
@@ -46,9 +50,19 @@ export default function ClaimCard() {
       </div>
       
       <div className="space-y-4">
-        <div className="bg-gray-50 border border-custom rounded-lg p-4 text-center">
-          <div className="text-base text-gray-900">
-            Claimable Amount: <span className="font-bold">{claimableAmount} USDC</span>
+        <div className="flex gap-4">
+          {/* Claimable Amount - Left (50%) */}
+          <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-4 py-2 text-center flex items-center justify-center">
+            <div className="text-sm text-gray-600">
+              Claimable Amount: <span className="font-bold text-gray-900">{formattedClaimable} USDC</span>
+            </div>
+          </div>
+
+          {/* Total Claimed - Right (50%) */}
+          <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-4 py-2 text-center flex items-center justify-center">
+            <div className="text-sm text-gray-600">
+              Total Claimed: <span className="font-bold text-gray-900">{formattedClaimed} USDC</span>
+            </div>
           </div>
         </div>
 

@@ -49,6 +49,9 @@ export function getBondFactoryContract() {
 export async function getAllPoolsToMonitor() {
   if (!USE_FACTORY) {
     // Single pool mode
+    if (!BOND_SERIES_ADDRESS) {
+      throw new Error('BOND_SERIES_ADDRESS is required in single pool mode');
+    }
     return [{
       poolId: '0',
       bondSeries: BOND_SERIES_ADDRESS,
@@ -60,11 +63,25 @@ export async function getAllPoolsToMonitor() {
   }
   
   // Factory mode
-  const { contract } = getBondFactoryContract();
+  let contract;
+  try {
+    const factory = getBondFactoryContract();
+    contract = factory.contract;
+  } catch (error) {
+    throw new Error(`Failed to connect to Factory: ${error.message}. Check BOND_FACTORY_ADDRESS in .env`);
+  }
   
   // Get all pools
-  const poolCount = Number(await contract.poolCount());
-  console.log(`   Total pools in Factory: ${poolCount}`);
+  let poolCount;
+  try {
+    poolCount = Number(await contract.poolCount());
+    console.log(`   Total pools in Factory: ${poolCount}`);
+  } catch (error) {
+    if (error.code === 'CALL_EXCEPTION') {
+      throw new Error(`Factory contract call failed. Address ${BOND_FACTORY_ADDRESS} might not be a Factory contract. Check your .env - if you're using single pool, set BOND_SERIES_ADDRESS instead of BOND_FACTORY_ADDRESS.`);
+    }
+    throw error;
+  }
   
   // If POOL_IDS specified, use those; otherwise get all active pools
   let poolIdsToMonitor = [];
@@ -83,17 +100,61 @@ export async function getAllPoolsToMonitor() {
     // Get all active pools
     try {
       const activePools = await contract.getActivePools();
-      poolIdsToMonitor = activePools.map(id => Number(id)).filter(id => {
-        // Validate pool IDs from getActivePools
-        if (id === 0 || id > poolCount) {
-          console.log(`   ⚠️  Pool ${id} from getActivePools() is invalid (poolCount: ${poolCount}), skipping`);
-          return false;
-        }
-        return true;
-      });
+      console.log(`   [DEBUG] getActivePools() returned ${activePools.length} items`);
+      
+      // Check if first item is bigint (poolId) or PoolInfo struct
+      const firstItem = activePools[0];
+      const isPoolIdArray = typeof firstItem === 'bigint' || (typeof firstItem === 'object' && firstItem?.constructor?.name === 'BigNumber');
+      
+      if (isPoolIdArray) {
+        // getActivePools() returned poolIds array (unexpected but handle it)
+        console.log('   [DEBUG] getActivePools() returned poolIds array, converting...');
+        poolIdsToMonitor = activePools.map(id => Number(id)).filter(id => {
+          if (id === 0 || id > poolCount || isNaN(id)) {
+            return false;
+          }
+          return true;
+        });
+      } else {
+        // getActivePools() returned PoolInfo[] array
+        poolIdsToMonitor = activePools.map((pool, index) => {
+          // Handle both array and object formats
+          let poolId;
+          if (Array.isArray(pool)) {
+            // PoolInfo as array: [poolId, bondToken, bondSeries, maturityDate, createdAt, isActive, name, symbol]
+            poolId = pool[0] ? Number(pool[0]) : null;
+          } else if (pool && typeof pool === 'object') {
+            // PoolInfo as object
+            poolId = pool.poolId ? Number(pool.poolId) : null;
+          } else {
+            return null;
+          }
+          
+          if (!poolId || isNaN(poolId)) {
+            return null;
+          }
+          
+          return poolId;
+        }).filter(id => {
+          // Filter out null/NaN values
+          if (!id || isNaN(id)) {
+            return false;
+          }
+          // Validate pool IDs from getActivePools
+          if (id === 0 || id > poolCount) {
+            return false;
+          }
+          return true;
+        });
+      }
+      
       console.log(`   Found ${poolIdsToMonitor.length} valid active pools via getActivePools()`);
+      if (poolIdsToMonitor.length > 0) {
+        console.log(`   Pool IDs: ${poolIdsToMonitor.join(', ')}`);
+      }
     } catch (error) {
       console.log('   getActivePools() failed, iterating through all pools...');
+      console.log('   Error:', error.message);
     }
     
     // Fallback: if getActivePools failed or returned invalid pools, iterate through all pools

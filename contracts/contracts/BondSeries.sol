@@ -26,7 +26,7 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     uint256 public constant COUPON_PER_TOKEN_PER_DAY = 0.001e6; // 0.001 USDC in 6 decimals (match USDC)
     uint256 public constant RESERVE_RATIO = 30; // 30% reserve
     uint256 public constant DEFAULT_GRACE_PERIOD = 3 days;
-    uint256 public constant SNAPSHOT_INTERVAL = 1 days; // Production: 1 day (24 hours)
+    uint256 public constant SNAPSHOT_INTERVAL = 5 minutes; // Testing: 5 minutes
     uint256 public constant PRECISION = 1e6; // Match USDC decimals for zero precision loss
     uint256 public constant MAX_CAP = 10_000e6; // 10,000 USDC cap
 
@@ -88,17 +88,17 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
      * @param bondToken_ BondToken contract address
      * @param usdc_ USDC token address
      * @param keeper_ Keeper address (backend automation)
-     * @param maturityHours_ Number of hours until maturity (use for testing)
+     * @param maturityMinutes_ Number of minutes until maturity (use for testing)
      */
     constructor(
         address bondToken_,
         address usdc_,
         address keeper_,
-        uint256 maturityHours_
+        uint256 maturityMinutes_
     ) {
         bondToken = BondToken(bondToken_);
         usdc = IERC20(usdc_);
-        maturityDate = block.timestamp + (maturityHours_ * 1 hours);
+        maturityDate = block.timestamp + (maturityMinutes_ * 1 minutes);
         
         // Setup roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -215,10 +215,12 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     // ==================== KEEPER FUNCTIONS ====================
     
     /**
-     * @notice Record daily snapshot (called by keeper automation)
+     * @notice Record snapshot (called by keeper automation)
+     * @dev Records snapshot every SNAPSHOT_INTERVAL (5 minutes for testing)
      */
     function recordSnapshot() external onlyRole(KEEPER_ROLE) {
         if (block.timestamp < nextRecordTime) revert TooSoon();
+        if (block.timestamp >= maturityDate) revert PoolExpired();
         
         recordCount++;
         
@@ -359,6 +361,57 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
             cumulativeCouponIndex,
             emergencyRedeemEnabled
         );
+    }
+    
+    /**
+     * @notice Check if an address can record snapshot
+     * @param keeper Address to check
+     * @return canRecord True if address has KEEPER_ROLE and timing is valid
+     * @return reason Reason if cannot record (empty if can record)
+     */
+    function canRecordSnapshot(address keeper) external view returns (bool canRecord, string memory reason) {
+        if (!hasRole(KEEPER_ROLE, keeper)) {
+            return (false, "Address does not have KEEPER_ROLE");
+        }
+        if (block.timestamp < nextRecordTime) {
+            return (false, "Too soon to record snapshot");
+        }
+        if (block.timestamp >= maturityDate) {
+            return (false, "Pool has expired");
+        }
+        return (true, "");
+    }
+    
+    /**
+     * @notice Get snapshot status information
+     * @return canRecordNow True if snapshot can be recorded now
+     * @return hasKeeperRole True if caller has KEEPER_ROLE
+     * @return timeUntilNext Seconds until next snapshot can be recorded (0 if can record now)
+     * @return isPoolExpired True if pool has expired
+     * @return nextRecordTimestamp Timestamp when next snapshot can be recorded
+     */
+    function getSnapshotStatus(address keeper) external view returns (
+        bool canRecordNow,
+        bool hasKeeperRole,
+        uint256 timeUntilNext,
+        bool isPoolExpired,
+        uint256 nextRecordTimestamp
+    ) {
+        hasKeeperRole = hasRole(KEEPER_ROLE, keeper);
+        isPoolExpired = block.timestamp >= maturityDate;
+        nextRecordTimestamp = nextRecordTime;
+        
+        if (block.timestamp >= nextRecordTime && !isPoolExpired) {
+            timeUntilNext = 0;
+            canRecordNow = hasKeeperRole;
+        } else {
+            if (nextRecordTime > block.timestamp) {
+                timeUntilNext = nextRecordTime - block.timestamp;
+            } else {
+                timeUntilNext = 0;
+            }
+            canRecordNow = false;
+        }
     }
 }
 

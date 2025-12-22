@@ -27,25 +27,23 @@ async function main() {
 
   // ==================== 2. Get Pool Parameters ====================
   // You can modify these parameters
-  const poolName = process.env.POOL_NAME || "ArcBond USDC Series 1";
-  const poolSymbol = process.env.POOL_SYMBOL || "arcUSDC-1";
+  const poolName = process.env.POOL_NAME || "Bond 1";
   const keeperAddress = process.env.KEEPER_ADDRESS || deployer.address;
-  const maturityHours = process.env.MATURITY_HOURS ? parseInt(process.env.MATURITY_HOURS) : 168; // 7 days default
+  const maturityMinutes = process.env.MATURITY_MINUTES ? parseInt(process.env.MATURITY_MINUTES) : 15; // 15 minutes default for testing
 
   console.log("2️⃣ Pool Parameters:");
   console.log("   Name:          ", poolName);
-  console.log("   Symbol:        ", poolSymbol);
+  console.log("   Symbol:        arcUSDC (hardcoded in contract)");
   console.log("   Keeper:        ", keeperAddress);
-  console.log("   Maturity Hours:", maturityHours, `(${maturityHours / 24} days)`);
+  console.log("   Maturity Minutes:", maturityMinutes);
   console.log("");
 
   // ==================== 3. Create Pool ====================
   console.log("3️⃣ Creating pool...");
   const tx = await bondFactory.createPool(
     poolName,
-    poolSymbol,
     keeperAddress,
-    maturityHours
+    maturityMinutes
   );
   console.log("   Transaction:", tx.hash);
   
