@@ -21,6 +21,7 @@ import {
 
 const CHECK_INTERVAL = 60 * 1000; // Check every 1 minute
 let isRunning = true;
+let isFirstRun = true;
 let lastPoolsRefresh = 0;
 let poolsCache = [];
 
@@ -153,9 +154,9 @@ async function runKeeperService() {
                     console.log(`\n⚡ It's time! Pool ${pool.poolId} is ready.`);
                     await recordSnapshotForPool(pool);
                 } else {
-                    // Log status every hour (when minutes == 0) to avoid spam
+                    // Log status every hour (when minutes == 0) OR on first run
                     const min = new Date().getMinutes();
-                    if (min === 0) { // e.g., 10:00, 11:00...
+                    if (min === 0 || isFirstRun) { // e.g., 10:00, 11:00... or startup
                         console.log(`⏳ Pool ${pool.poolId}: Waiting... ${timeLeft.hours.toFixed(1)} hours left until ${formatTimestamp(nextRecordTime)}`);
                     }
                 }
@@ -166,6 +167,8 @@ async function runKeeperService() {
 
         // Heartbeat every minute
         process.stdout.write(`\r💓 Heartbeat: ${new Date().toLocaleTimeString()} | Monitoring ${poolsCache.length} pools `);
+
+        isFirstRun = false;
 
     }, CHECK_INTERVAL);
 
