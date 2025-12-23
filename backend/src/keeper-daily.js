@@ -111,64 +111,97 @@ async function runKeeperService() {
     }
 
     // Loop
+    let isProcessing = false;
+
+    // Add cache
+    const lastExecutionCache = new Map();
+
     const interval = setInterval(async () => {
         if (!isRunning) {
             clearInterval(interval);
             return;
         }
 
-        const now = Date.now();
-
-        // 1. Refresh pools every 10 mins
-        if (now - lastPoolsRefresh > 10 * 60 * 1000) {
-            try {
-                const newPools = await getAllPoolsToMonitor();
-                if (newPools.length !== poolsCache.length) {
-                    console.log(`\n🔄 Pools updated: ${poolsCache.length} → ${newPools.length}`);
-                    poolsCache = newPools;
-                }
-                lastPoolsRefresh = now;
-            } catch (err) {
-                console.error('⚠️ Refresh failed:', err.message);
-            }
+        if (isProcessing) {
+            console.log('⏳ Previous cycle still running, skipping this tick...');
+            return;
         }
 
-        // 2. Check each pool
-        for (const pool of poolsCache) {
-            try {
-                // Simple check: getTimeLeft
-                // We need to instantiate contract to view
-                const { contract } = getBondSeriesContract(pool.bondSeries);
+        isProcessing = true;
 
-                let nextRecordTime;
+        try {
+            const now = Date.now();
+            const todayKey = new Date().toISOString().split('T')[0]; // "2025-12-23"
+
+            // 1. Refresh pools every 10 mins
+            if (now - lastPoolsRefresh > 10 * 60 * 1000) {
                 try {
-                    nextRecordTime = await contract.nextRecordTime();
-                } catch (callErr) {
-                    console.log(`⚠️ Failed to read nextRecordTime for Pool ${pool.poolId}`);
-                    continue;
-                }
-
-                const timeLeft = getTimeLeft(nextRecordTime);
-
-                if (timeLeft.canRecord) {
-                    console.log(`\n⚡ It's time! Pool ${pool.poolId} is ready.`);
-                    await recordSnapshotForPool(pool);
-                } else {
-                    // Log status every hour (when minutes == 0) OR on first run
-                    const min = new Date().getMinutes();
-                    if (min === 0 || isFirstRun) { // e.g., 10:00, 11:00... or startup
-                        console.log(`⏳ Pool ${pool.poolId}: Waiting... ${timeLeft.hours.toFixed(1)} hours left until ${formatTimestamp(nextRecordTime)}`);
+                    const newPools = await getAllPoolsToMonitor();
+                    if (newPools.length !== poolsCache.length) {
+                        console.log(`\n🔄 Pools updated: ${poolsCache.length} → ${newPools.length}`);
+                        poolsCache = newPools;
                     }
+                    lastPoolsRefresh = now;
+                } catch (err) {
+                    console.error('⚠️ Refresh failed:', err.message);
                 }
-            } catch (poolErr) {
-                // Silent fail or log debug
             }
+
+            // 2. Check each pool
+            for (const pool of poolsCache) {
+                try {
+                    // Check local cache first
+                    const poolKey = pool.bondSeries; // Use address as key
+                    if (lastExecutionCache.get(poolKey) === todayKey) {
+                        // Already processed for today
+                        continue;
+                    }
+
+                    // Simple check: getTimeLeft
+                    // We need to instantiate contract to view
+                    const { contract } = getBondSeriesContract(pool.bondSeries);
+
+                    let nextRecordTime;
+                    try {
+                        nextRecordTime = await contract.nextRecordTime();
+                    } catch (callErr) {
+                        console.log(`⚠️ Failed to read nextRecordTime for Pool ${pool.poolId}`);
+                        continue;
+                    }
+
+                    const timeLeft = getTimeLeft(nextRecordTime);
+
+                    if (timeLeft.canRecord) {
+                        console.log(`\n⚡ It's time! Pool ${pool.poolId} is ready.`);
+                        const success = await recordSnapshotForPool(pool);
+
+                        if (success) {
+                            // Update cache
+                            lastExecutionCache.set(poolKey, todayKey);
+                            console.log(`✅ Marked pool ${pool.poolId} as completed for ${todayKey}`);
+                        }
+                    } else {
+                        // Log status every hour (when minutes == 0) OR on first run
+                        const min = new Date().getMinutes();
+                        if (min === 0 || isFirstRun) { // e.g., 10:00, 11:00... or startup
+                            console.log(`⏳ Pool ${pool.poolId}: Waiting... ${timeLeft.hours.toFixed(1)} hours left until ${formatTimestamp(nextRecordTime)}`);
+                        }
+                    }
+                } catch (poolErr) {
+                    // Silent fail or log debug
+                }
+            }
+
+            // Heartbeat every minute
+            process.stdout.write(`\r💓 Heartbeat: ${new Date().toLocaleTimeString()} | Monitoring ${poolsCache.length} pools `);
+
+            isFirstRun = false;
+
+        } catch (error) {
+            console.error('\n❌ Error in keeper loop:', error);
+        } finally {
+            isProcessing = false;
         }
-
-        // Heartbeat every minute
-        process.stdout.write(`\r💓 Heartbeat: ${new Date().toLocaleTimeString()} | Monitoring ${poolsCache.length} pools `);
-
-        isFirstRun = false;
 
     }, CHECK_INTERVAL);
 

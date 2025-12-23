@@ -1,7 +1,18 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
-import { ABIs, getBondFactoryAddress, ARC_TESTNET_CHAIN_ID } from '@/abi/contracts';
+import { ABIs, getBondFactoryAddress, ARC_TESTNET_CHAIN_ID, BondFactoryAddresses } from '@/abi/contracts';
 import { useAccount } from 'wagmi';
 import { useChainId } from 'wagmi';
+
+/**
+ * Helper to get a safe chain ID
+ * If current chain is supported (has BondFactory), use it.
+ * Otherwise, fallback to Arc Testnet.
+ */
+function useSafeChainId() {
+  const chainId = useChainId();
+  const isSupported = !!BondFactoryAddresses[chainId?.toString() as keyof typeof BondFactoryAddresses];
+  return isSupported ? chainId : ARC_TESTNET_CHAIN_ID;
+}
 
 /**
  * Hook to create a new bond pool
@@ -11,20 +22,23 @@ export function useCreatePool() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
-  const chainId = useChainId();
+  // For write, we might want to prompt switch, but avoiding crash is priority.
+  // If we default to Arc address, wallet will likely prompt network switch when writing.
+  const safeChainId = useSafeChainId();
 
   const createPool = (
     name: string,
     keeper: `0x${string}`,
     maturityMinutes: number
   ) => {
-    const factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
-    
+    const factoryAddress = getBondFactoryAddress(safeChainId);
+
     writeContract({
       address: factoryAddress,
       abi: ABIs.BondFactory,
       functionName: 'createPool',
       args: [name, keeper, BigInt(maturityMinutes)],
+      chainId: safeChainId, // Explicitly target the chain
     });
   };
 
@@ -43,17 +57,18 @@ export function useCreatePool() {
  * Check if user has POOL_CREATOR_ROLE
  */
 export function useIsPoolCreator(address?: `0x${string}`) {
-  const chainId = useChainId();
+  const safeChainId = useSafeChainId();
   const { address: connectedAddress } = useAccount();
   const targetAddress = address || connectedAddress;
 
-  const factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
+  const factoryAddress = getBondFactoryAddress(safeChainId);
 
   // Get POOL_CREATOR_ROLE constant
   const { data: poolCreatorRole } = useReadContract({
     address: factoryAddress,
     abi: ABIs.BondFactory,
     functionName: 'POOL_CREATOR_ROLE',
+    chainId: safeChainId,
   });
 
   // Check if user has role
@@ -63,6 +78,7 @@ export function useIsPoolCreator(address?: `0x${string}`) {
     functionName: 'hasRole',
     args: poolCreatorRole && targetAddress ? [poolCreatorRole, targetAddress] : undefined,
     query: { enabled: !!poolCreatorRole && !!targetAddress },
+    chainId: safeChainId,
   });
 
   return {
@@ -75,13 +91,14 @@ export function useIsPoolCreator(address?: `0x${string}`) {
  * Get pool count
  */
 export function usePoolCount() {
-  const chainId = useChainId();
-  const factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
+  const safeChainId = useSafeChainId();
+  const factoryAddress = getBondFactoryAddress(safeChainId);
 
   return useReadContract({
     address: factoryAddress,
     abi: ABIs.BondFactory,
     functionName: 'poolCount',
+    chainId: safeChainId,
   });
 }
 
@@ -89,27 +106,26 @@ export function usePoolCount() {
  * Get all pools from Factory contract (real-time)
  */
 export function useAllPools() {
-  const chainId = useChainId();
-  const factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
-  
+  const safeChainId = useSafeChainId();
+  const factoryAddress = getBondFactoryAddress(safeChainId);
+
   const result = useReadContract({
     address: factoryAddress,
     abi: ABIs.BondFactory,
     functionName: 'getAllPools',
-    query: { 
+    chainId: safeChainId,
+    query: {
       enabled: !!factoryAddress,
-      refetchInterval: 10000, // Refetch every 10 seconds
-      staleTime: 0, // Always consider data stale
+      refetchInterval: 10000,
+      staleTime: 0,
     },
   });
-  
+
   // Debug logs
   if (result.data) {
-    console.log("[useAllPools] Factory address:", factoryAddress);
-    console.log("[useAllPools] Pools count:", Array.isArray(result.data) ? result.data.length : "not array");
-    console.log("[useAllPools] Pools data:", result.data);
+    if (Math.random() > 0.95) console.log("[useAllPools] Loaded pools from chain", safeChainId);
   }
-  
+
   return result;
 }
 
@@ -117,8 +133,8 @@ export function useAllPools() {
  * Get single pool by ID from Factory contract
  */
 export function usePoolById(poolId: bigint | number | string | null) {
-  const chainId = useChainId();
-  const factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
+  const safeChainId = useSafeChainId();
+  const factoryAddress = getBondFactoryAddress(safeChainId);
   const poolIdBigInt = poolId ? BigInt(poolId) : null;
 
   return useReadContract({
@@ -127,6 +143,7 @@ export function usePoolById(poolId: bigint | number | string | null) {
     functionName: 'getPool',
     args: poolIdBigInt ? [poolIdBigInt] : undefined,
     query: { enabled: !!factoryAddress && !!poolIdBigInt },
+    chainId: safeChainId,
   });
 }
 
