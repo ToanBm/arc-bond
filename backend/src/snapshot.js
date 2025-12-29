@@ -46,13 +46,26 @@ async function recordSnapshotForPool(pool) {
     console.log('\n📍 Keeper address:', keeper.address);
     
     // Check keeper balance (native token on Arc = USDC with 18 decimals)
-    const keeperBalance = await getKeeperBalance();
+    const keeperBalance = await getKeeperBalance(pool.bondSeries);
     console.log('💰 Keeper balance:', ethers.formatUnits(keeperBalance, 18), 'USDC');
     
     const MIN_BALANCE = ethers.parseUnits('1', 18); // 1 USDC (native token)
     if (keeperBalance < MIN_BALANCE) {
       console.log('⚠️ WARNING: Keeper balance low!');
       await notifyLowBalance(keeperBalance);
+    }
+    
+    // Verify allow status first (check keeper role and permissions)
+    const canRecord = await contract.canRecordSnapshot(keeper.address);
+    if (!canRecord[0]) {
+      console.log(`\n❌ Contract rejected: ${canRecord[1]}`);
+      return {
+        success: false,
+        poolId: pool.poolId,
+        poolName: poolLabel,
+        reason: 'contract_rejected',
+        error: canRecord[1]
+      };
     }
     
     // Get timing info

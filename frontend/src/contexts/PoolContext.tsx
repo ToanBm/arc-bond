@@ -33,31 +33,27 @@ function convertContractPoolToPoolInfo(contractPool: any, poolId: string): PoolI
 
 export function PoolProvider({ children }: { children: ReactNode }) {
   const chainId = useChainId();
-  const [selectedPoolId, setSelectedPoolIdState] = useState<string | null>(null);
+  // Initialize from localStorage if available
+  const [selectedPoolId, setSelectedPoolIdState] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem("selectedPoolId");
+    }
+    return null;
+  });
 
   // Query pools from contract (real-time)
   const { data: contractPools, refetch: refetchPools } = useAllPools();
 
   // Convert contract pools to PoolInfo format
   const contractPoolsMap = useMemo(() => {
-    if (!contractPools || !Array.isArray(contractPools)) {
-      console.log("[PoolContext] No contract pools or not array:", contractPools);
-      return {};
-    }
     const map: Record<string, PoolInfo> = {};
-    console.log("[PoolContext] Raw contractPools:", contractPools);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    contractPools.forEach((pool: any, index: number) => {
-      const poolId = pool.poolId?.toString() || (index + 1).toString();
-      map[poolId] = convertContractPoolToPoolInfo(pool, poolId);
-      console.log(`[PoolContext] Pool ${poolId}:`, {
-        name: pool.name || map[poolId].name,
-        bondSeries: map[poolId].bondSeries,
-        bondToken: map[poolId].bondToken,
-        maturityDate: map[poolId].maturityDate,
+    if (contractPools && Array.isArray(contractPools)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      contractPools.forEach((pool: any, index: number) => {
+        const poolId = pool.poolId?.toString() || (index + 1).toString();
+        map[poolId] = convertContractPoolToPoolInfo(pool, poolId);
       });
-    });
-    console.log("[PoolContext] contractPoolsMap:", Object.keys(map));
+    }
     return map;
   }, [contractPools]);
 
@@ -89,7 +85,6 @@ export function PoolProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    console.log("[PoolContext] Final poolIds:", ids);
     return ids;
   }, [contractPoolsMap, filePoolIds]);
 
@@ -97,16 +92,15 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   const defaultPool: PoolInfo | null = useMemo(() => {
     if (chainId !== ARC_TESTNET_CHAIN_ID) return null;
 
-    // Try contract pools first (newest first)
+    // Try contract pools first
     const contractPoolIds = Object.keys(contractPoolsMap).sort((a, b) => {
       const aNum = parseInt(a) || 0;
       const bNum = parseInt(b) || 0;
-      return bNum - aNum; // Descending: newest first
+      return bNum - aNum;
     });
+
     if (contractPoolIds.length > 0) {
-      const newestPool = contractPoolsMap[contractPoolIds[0]];
-      console.log("[PoolContext] Default pool (newest):", contractPoolIds[0], newestPool);
-      return newestPool || null;
+      return contractPoolsMap[contractPoolIds[0]] || null;
     }
 
     // Fallback to file pools
@@ -117,9 +111,8 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     return null;
   }, [chainId, contractPoolsMap, filePoolIds]);
 
-  // Expose refetch function for manual refresh (e.g., after creating new pool)
+  // Auto-refetch pools
   useEffect(() => {
-    // Auto-refetch pools every 30 seconds to catch new pools
     const interval = setInterval(() => {
       refetchPools();
     }, 30000);
@@ -129,13 +122,15 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   // Initialize selected pool when chain or pools change
   useEffect(() => {
     if (chainId === ARC_TESTNET_CHAIN_ID && poolIds.length > 0) {
-      // Always use newest pool (first in list, which is sorted by poolId descending)
-      const newestPoolId = poolIds[0];
-      console.log("[PoolContext] Setting selected pool to newest:", newestPoolId, "from poolIds:", poolIds);
-      setSelectedPoolIdState(newestPoolId);
-      localStorage.setItem("selectedPoolId", newestPoolId);
-    } else {
-      // Reset if chain changed or no pools
+      const currentSelected = selectedPoolId;
+      const isValidPool = currentSelected && poolIds.includes(currentSelected);
+
+      if (!isValidPool) {
+        const newestPoolId = poolIds[0];
+        setSelectedPoolIdState(newestPoolId);
+        localStorage.setItem("selectedPoolId", newestPoolId);
+      }
+    } else if (chainId !== ARC_TESTNET_CHAIN_ID) {
       setSelectedPoolIdState(null);
       localStorage.removeItem("selectedPoolId");
     }
@@ -154,32 +149,18 @@ export function PoolProvider({ children }: { children: ReactNode }) {
   // Get selected pool info
   const selectedPool = useMemo(() => {
     if (!selectedPoolId || chainId !== ARC_TESTNET_CHAIN_ID) {
-      console.log("[PoolContext] No selectedPoolId or wrong chain, using defaultPool:", defaultPool);
       return defaultPool;
     }
 
-    // Try contract pools first (real-time)
     if (contractPoolsMap[selectedPoolId]) {
-      const pool = contractPoolsMap[selectedPoolId];
-      console.log(`[PoolContext] Using contract pool ${selectedPoolId}:`, {
-        name: pool.name,
-        bondSeries: pool.bondSeries,
-        bondToken: pool.bondToken,
-      });
-      return pool;
+      return contractPoolsMap[selectedPoolId];
     }
 
-    // Fallback to file pools
     const filePool = getPool(chainId, selectedPoolId);
     if (filePool) {
-      console.log(`[PoolContext] Using file pool ${selectedPoolId}:`, {
-        name: filePool.name,
-        bondSeries: filePool.bondSeries,
-      });
       return filePool;
     }
 
-    console.log(`[PoolContext] Pool ${selectedPoolId} not found, using defaultPool:`, defaultPool);
     return defaultPool;
   }, [selectedPoolId, chainId, contractPoolsMap, defaultPool]);
 
@@ -203,4 +184,3 @@ export function usePool() {
   }
   return context;
 }
-

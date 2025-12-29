@@ -16,50 +16,17 @@ function useBondSeriesAddress() {
  * Read Hooks
  */
 
-// Get all series info (maturityDate, totalDeposited, totalSupply, recordCount, cumulativeIndex, emergencyMode)
+// Get all series info (maturityDate, totalDeposited, totalSupply, lastDistributionIndex, lastDistributionTime, emergencyMode)
 export function useBondSeriesInfo() {
   const bondSeriesAddress = useBondSeriesAddress();
   return useReadContract({
     address: bondSeriesAddress,
     abi: ABIs.BondSeries,
     functionName: 'getSeriesInfo',
-    query: { 
+    query: {
       enabled: !!bondSeriesAddress,
-      refetchInterval: 30000, // Refetch every 30s as backup
+      refetchInterval: 30000,
     },
-  });
-}
-
-// Get next record time
-export function useNextRecordTime() {
-  const bondSeriesAddress = useBondSeriesAddress();
-  return useReadContract({
-    address: bondSeriesAddress,
-    abi: ABIs.BondSeries,
-    functionName: 'nextRecordTime',
-    query: { enabled: !!bondSeriesAddress },
-  });
-}
-
-// Get record count
-export function useRecordCount() {
-  const bondSeriesAddress = useBondSeriesAddress();
-  return useReadContract({
-    address: bondSeriesAddress,
-    abi: ABIs.BondSeries,
-    functionName: 'recordCount',
-    query: { enabled: !!bondSeriesAddress },
-  });
-}
-
-// Get last distributed record
-export function useLastDistributedRecord() {
-  const bondSeriesAddress = useBondSeriesAddress();
-  return useReadContract({
-    address: bondSeriesAddress,
-    abi: ABIs.BondSeries,
-    functionName: 'lastDistributedRecord',
-    query: { enabled: !!bondSeriesAddress },
   });
 }
 
@@ -71,14 +38,29 @@ export function useClaimableAmount(address?: `0x${string}`) {
     abi: ABIs.BondSeries,
     functionName: 'claimableAmount',
     args: address ? [address] : undefined,
-    query: { 
+    query: {
       enabled: !!bondSeriesAddress && !!address,
-      refetchInterval: 30000, // Refetch every 30s as backup
+      refetchInterval: 30000,
     },
   });
 }
 
-// Get treasury status [balance, reserved, withdrawable]
+// Get total interest received amount for user
+export function useInterestReceived(address?: `0x${string}`) {
+  const bondSeriesAddress = useBondSeriesAddress();
+  return useReadContract({
+    address: bondSeriesAddress,
+    abi: ABIs.BondSeries,
+    functionName: 'interestReceived',
+    args: address ? [address] : undefined,
+    query: {
+      enabled: !!bondSeriesAddress && !!address,
+      refetchInterval: 30000,
+    },
+  });
+}
+
+// Get treasury status [balance, required, withdrawable]
 export function useTreasuryStatus() {
   const bondSeriesAddress = useBondSeriesAddress();
   return useReadContract({
@@ -112,18 +94,17 @@ export function useEmergencyRedeemEnabled() {
 }
 
 // Check if address has DEFAULT_ADMIN_ROLE
-// With Factory pattern, check role on Factory (admin role is on Factory, not BondSeries)
 export function useIsAdmin(address?: `0x${string}`) {
   const chainId = useChainId();
   const DEFAULT_ADMIN_ROLE = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;
-  
+
   let factoryAddress: `0x${string}` | undefined;
   try {
     factoryAddress = getBondFactoryAddress(chainId || ARC_TESTNET_CHAIN_ID);
   } catch {
     factoryAddress = undefined;
   }
-  
+
   return useReadContract({
     address: factoryAddress,
     abi: ABIs.BondFactory,
@@ -144,7 +125,6 @@ export function useDeposit() {
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Invalidate queries immediately after successful deposit
   useEffect(() => {
     if (isSuccess && hash) {
       queryClient.invalidateQueries({ queryKey: ['readContract'] });
@@ -157,7 +137,7 @@ export function useDeposit() {
       address: bondSeriesAddress,
       abi: ABIs.BondSeries,
       functionName: 'deposit',
-      args: [parseUnits(usdcAmount, 6)], // USDC 6 decimals
+      args: [parseUnits(usdcAmount, 6)],
     });
   };
 
@@ -171,31 +151,30 @@ export function useDeposit() {
   };
 }
 
-// Claim coupon
-export function useClaimCoupon() {
+// Claim interest
+export function useClaimInterest() {
   const bondSeriesAddress = useBondSeriesAddress();
   const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Invalidate queries immediately after successful claim
   useEffect(() => {
     if (isSuccess && hash) {
       queryClient.invalidateQueries({ queryKey: ['readContract'] });
     }
   }, [isSuccess, hash, queryClient]);
 
-  const claimCoupon = () => {
+  const claimInterest = () => {
     if (!bondSeriesAddress) return;
     writeContract({
       address: bondSeriesAddress,
       abi: ABIs.BondSeries,
-      functionName: 'claimCoupon',
+      functionName: 'claimInterest',
     });
   };
 
   return {
-    claimCoupon,
+    claimInterest,
     hash,
     isPending,
     isConfirming,
@@ -212,11 +191,10 @@ export function useRedeem(bondSeriesAddress?: `0x${string}`) {
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Invalidate queries immediately after successful redeem
   useEffect(() => {
     if (isSuccess && hash) {
       queryClient.invalidateQueries({ queryKey: ['readContract'] });
-      queryClient.invalidateQueries({ queryKey: ['readContracts'] }); // Also invalidate useReadContracts
+      queryClient.invalidateQueries({ queryKey: ['readContracts'] });
     }
   }, [isSuccess, hash, queryClient]);
 
@@ -226,7 +204,7 @@ export function useRedeem(bondSeriesAddress?: `0x${string}`) {
       address: targetAddress,
       abi: ABIs.BondSeries,
       functionName: 'redeem',
-      args: [parseUnits(bondAmount, 6)], // arcUSDC 6 decimals
+      args: [parseUnits(bondAmount, 6)],
     });
   };
 
@@ -244,65 +222,31 @@ export function useRedeem(bondSeriesAddress?: `0x${string}`) {
  * Admin Write Hooks
  */
 
-// Record snapshot (Keeper only)
-export function useRecordSnapshot() {
+// Distribute interest (Owner only)
+export function useDistributeInterest() {
   const bondSeriesAddress = useBondSeriesAddress();
   const queryClient = useQueryClient();
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Invalidate queries immediately after successful snapshot
   useEffect(() => {
     if (isSuccess && hash) {
       queryClient.invalidateQueries({ queryKey: ['readContract'] });
     }
   }, [isSuccess, hash, queryClient]);
 
-  const recordSnapshot = () => {
+  const distributeInterest = (amount: string) => {
     if (!bondSeriesAddress) return;
     writeContract({
       address: bondSeriesAddress,
       abi: ABIs.BondSeries,
-      functionName: 'recordSnapshot',
-    });
-  };
-
-  return {
-    recordSnapshot,
-    hash,
-    isPending,
-    isConfirming,
-    isSuccess,
-    error,
-  };
-}
-
-// Distribute coupon (Owner only)
-export function useDistributeCoupon() {
-  const bondSeriesAddress = useBondSeriesAddress();
-  const queryClient = useQueryClient();
-  const { data: hash, writeContract, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
-
-  // Invalidate queries immediately after successful distribution
-  useEffect(() => {
-    if (isSuccess && hash) {
-      queryClient.invalidateQueries({ queryKey: ['readContract'] });
-    }
-  }, [isSuccess, hash, queryClient]);
-
-  const distributeCoupon = (amount: string) => {
-    if (!bondSeriesAddress) return;
-    writeContract({
-      address: bondSeriesAddress,
-      abi: ABIs.BondSeries,
-      functionName: 'distributeCoupon',
+      functionName: 'distributeInterest',
       args: [parseUnits(amount, 6)],
     });
   };
 
   return {
-    distributeCoupon,
+    distributeInterest,
     hash,
     isPending,
     isConfirming,
@@ -318,7 +262,6 @@ export function useOwnerWithdraw() {
   const { data: hash, writeContract, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
-  // Invalidate queries immediately after successful withdraw
   useEffect(() => {
     if (isSuccess && hash) {
       queryClient.invalidateQueries({ queryKey: ['readContract'] });
@@ -394,4 +337,3 @@ export function useUnpause() {
     error,
   };
 }
-

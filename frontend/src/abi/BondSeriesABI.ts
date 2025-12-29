@@ -23,7 +23,7 @@ export const BondSeriesABI = {
         },
         {
           "internalType": "uint256",
-          "name": "maturityMinutes_",
+          "name": "maturityHours_",
           "type": "uint256"
         }
       ],
@@ -49,11 +49,6 @@ export const BondSeriesABI = {
         }
       ],
       "name": "AccessControlUnauthorizedAccount",
-      "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "AlreadyDistributed",
       "type": "error"
     },
     {
@@ -88,11 +83,6 @@ export const BondSeriesABI = {
     },
     {
       "inputs": [],
-      "name": "NoSnapshotAvailable",
-      "type": "error"
-    },
-    {
-      "inputs": [],
       "name": "NotMatured",
       "type": "error"
     },
@@ -121,67 +111,6 @@ export const BondSeriesABI = {
       ],
       "name": "SafeERC20FailedOperation",
       "type": "error"
-    },
-    {
-      "inputs": [],
-      "name": "TooSoon",
-      "type": "error"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "address",
-          "name": "user",
-          "type": "address"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "CouponClaimed",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "newIndex",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "CouponDistributed",
-      "type": "event"
     },
     {
       "anonymous": false,
@@ -225,6 +154,56 @@ export const BondSeriesABI = {
         }
       ],
       "name": "EmergencyRedeemEnabled",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "user",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "InterestClaimed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "amount",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "newIndex",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "timestamp",
+          "type": "uint256"
+        }
+      ],
+      "name": "InterestDistributed",
       "type": "event"
     },
     {
@@ -375,37 +354,6 @@ export const BondSeriesABI = {
       "anonymous": false,
       "inputs": [
         {
-          "indexed": true,
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "totalSupply",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "treasuryBalance",
-          "type": "uint256"
-        },
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        }
-      ],
-      "name": "SnapshotRecorded",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
           "indexed": false,
           "internalType": "address",
           "name": "account",
@@ -482,6 +430,19 @@ export const BondSeriesABI = {
     },
     {
       "inputs": [],
+      "name": "INDEX_RATE_PER_SECOND",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
       "name": "KEEPER_ROLE",
       "outputs": [
         {
@@ -546,16 +507,26 @@ export const BondSeriesABI = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "SNAPSHOT_INTERVAL",
-      "outputs": [
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "from",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "to",
+          "type": "address"
+        },
         {
           "internalType": "uint256",
           "name": "",
           "type": "uint256"
         }
       ],
-      "stateMutability": "view",
+      "name": "_handleTransfer",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -572,32 +543,15 @@ export const BondSeriesABI = {
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "keeper",
-          "type": "address"
-        }
-      ],
-      "name": "canRecordSnapshot",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "canRecord",
-          "type": "bool"
-        },
-        {
-          "internalType": "string",
-          "name": "reason",
-          "type": "string"
-        }
-      ],
-      "stateMutability": "view",
+      "inputs": [],
+      "name": "checkEmergencyMode",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [],
-      "name": "claimCoupon",
+      "name": "claimInterest",
       "outputs": [
         {
           "internalType": "uint256",
@@ -647,19 +601,6 @@ export const BondSeriesABI = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "cumulativeCouponIndex",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
       "inputs": [
         {
           "internalType": "uint256",
@@ -680,7 +621,7 @@ export const BondSeriesABI = {
           "type": "uint256"
         }
       ],
-      "name": "distributeCoupon",
+      "name": "distributeInterest",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -706,6 +647,19 @@ export const BondSeriesABI = {
           "internalType": "bool",
           "name": "",
           "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getCurrentIndex",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -751,57 +705,18 @@ export const BondSeriesABI = {
         },
         {
           "internalType": "uint256",
-          "name": "_recordCount",
+          "name": "_currentIndex",
           "type": "uint256"
         },
         {
           "internalType": "uint256",
-          "name": "_cumulativeCouponIndex",
+          "name": "_lastDistributionTime",
           "type": "uint256"
         },
         {
           "internalType": "bool",
           "name": "_emergencyMode",
           "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "address",
-          "name": "keeper",
-          "type": "address"
-        }
-      ],
-      "name": "getSnapshotStatus",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "canRecordNow",
-          "type": "bool"
-        },
-        {
-          "internalType": "bool",
-          "name": "hasKeeperRole",
-          "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "timeUntilNext",
-          "type": "uint256"
-        },
-        {
-          "internalType": "bool",
-          "name": "isPoolExpired",
-          "type": "bool"
-        },
-        {
-          "internalType": "uint256",
-          "name": "nextRecordTimestamp",
-          "type": "uint256"
         }
       ],
       "stateMutability": "view",
@@ -873,8 +788,14 @@ export const BondSeriesABI = {
       "type": "function"
     },
     {
-      "inputs": [],
-      "name": "lastDistributedRecord",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "interestReceived",
       "outputs": [
         {
           "internalType": "uint256",
@@ -887,7 +808,20 @@ export const BondSeriesABI = {
     },
     {
       "inputs": [],
-      "name": "lastRecordTime",
+      "name": "lastDistributionIndex",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "lastDistributionTime",
       "outputs": [
         {
           "internalType": "uint256",
@@ -901,19 +835,6 @@ export const BondSeriesABI = {
     {
       "inputs": [],
       "name": "maturityDate",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "nextRecordTime",
       "outputs": [
         {
           "internalType": "uint256",
@@ -955,26 +876,6 @@ export const BondSeriesABI = {
         }
       ],
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "recordCount",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "recordSnapshot",
-      "outputs": [],
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -1024,40 +925,6 @@ export const BondSeriesABI = {
       "name": "revokeRole",
       "outputs": [],
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "name": "snapshots",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "recordId",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "timestamp",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "totalSupply",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "treasuryBalance",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
       "type": "function"
     },
     {

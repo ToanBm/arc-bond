@@ -1,9 +1,11 @@
 import { ethers } from "hardhat";
-import { getDeployedAddresses } from "./utils/getAddresses";
+import { getPoolAddresses } from "./utils/getAddresses";
 
 /**
  * Script: Owner deposit USDC into treasury
- * Usage: npx hardhat run scripts/ownerDepositUSDC.ts --network arc
+ * Usage: 
+ *   npx hardhat run scripts/ownerDepositUSDC.ts --network arc
+ *   npx hardhat run scripts/ownerDepositUSDC.ts --network arc --pool-id 1
  * 
  * Use case: Replenish treasury to ensure enough funds for redemptions
  */
@@ -12,10 +14,18 @@ async function main() {
   console.log("💰 Owner Depositing USDC to Treasury...\n");
 
   const [owner] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+  
+  // Get pool ID from args
+  const poolIdArg = process.argv.find(arg => arg.startsWith("--pool-id"));
+  const poolId = poolIdArg ? (poolIdArg.split("=")[1] || process.argv[process.argv.indexOf(poolIdArg) + 1]) : undefined;
+  
   console.log("📍 Owner address:", owner.address);
 
-  // Get contract addresses from deployment
-  const { USDC_ADDRESS, BOND_SERIES_ADDRESS } = await getDeployedAddresses();
+  // Get contract addresses from Factory
+  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, POOL_ID } = await getPoolAddresses(chainId, poolId);
+  console.log("📍 Pool ID:", POOL_ID);
   
   // Get contracts
   const usdc = await ethers.getContractAt("contracts/IERC20.sol:IERC20", USDC_ADDRESS);

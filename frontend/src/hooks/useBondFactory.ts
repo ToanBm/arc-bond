@@ -29,7 +29,7 @@ export function useCreatePool() {
   const createPool = (
     name: string,
     keeper: `0x${string}`,
-    maturityMinutes: number
+    maturityHours: number
   ) => {
     const factoryAddress = getBondFactoryAddress(safeChainId);
 
@@ -37,7 +37,7 @@ export function useCreatePool() {
       address: factoryAddress,
       abi: ABIs.BondFactory,
       functionName: 'createPool',
-      args: [name, keeper, BigInt(maturityMinutes)],
+      args: [name, keeper, BigInt(maturityHours)],
       chainId: safeChainId, // Explicitly target the chain
     });
   };
@@ -121,10 +121,6 @@ export function useAllPools() {
     },
   });
 
-  // Debug logs
-  if (result.data) {
-    if (Math.random() > 0.95) console.log("[useAllPools] Loaded pools from chain", safeChainId);
-  }
 
   return result;
 }

@@ -1,19 +1,29 @@
 import { ethers } from "hardhat";
-import { getDeployedAddresses } from "./utils/getAddresses";
+import { getPoolAddresses } from "./utils/getAddresses";
 
 /**
  * Script: Deposit USDC to get BondTokens
- * Usage: npx hardhat run scripts/02-deposit.ts --network arc
+ * Usage: 
+ *   npx hardhat run scripts/02-deposit.ts --network arc
+ *   npx hardhat run scripts/02-deposit.ts --network arc --pool-id 1
  */
 
 async function main() {
   console.log("💼 Depositing USDC to BondSeries...\n");
 
   const [signer] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+  
+  // Get pool ID from args
+  const poolIdArg = process.argv.find(arg => arg.startsWith("--pool-id"));
+  const poolId = poolIdArg ? (poolIdArg.split("=")[1] || process.argv[process.argv.indexOf(poolIdArg) + 1]) : undefined;
+  
   console.log("📍 Your address:", signer.address);
 
-  // Get contract addresses from deployment
-  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, BOND_TOKEN_ADDRESS } = await getDeployedAddresses();
+  // Get contract addresses from Factory
+  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, BOND_TOKEN_ADDRESS, POOL_ID } = await getPoolAddresses(chainId, poolId);
+  console.log("📍 Pool ID:", POOL_ID);
   
   // Amount to deposit (change this as needed)
   const AMOUNT_USDC = 2; // 2 USDC
@@ -66,8 +76,8 @@ async function main() {
   console.log("\n📋 Series Info:");
   console.log("   Total Deposited:", ethers.formatUnits(seriesInfo[1], 6), "USDC");
   console.log("   Total Supply:", ethers.formatUnits(seriesInfo[2], 6), "ABOND");
-  console.log("   Record Count:", seriesInfo[3].toString());
-  console.log("   Cumulative Index:", ethers.formatEther(seriesInfo[4]));
+  console.log("   Current Index:", ethers.formatUnits(seriesInfo[3], 6));
+  console.log("   Last Distribution Time:", new Date(Number(seriesInfo[4]) * 1000).toISOString());
 }
 
 main().catch((error) => {

@@ -17,12 +17,12 @@ export {
   useIsPaused,
   useEmergencyRedeemEnabled,
   useIsAdmin,
-  
+
   // Write (User)
   useDeposit,
   useClaimCoupon,
   useRedeem,
-  
+
   // Write (Admin)
   useRecordSnapshot,
   useDistributeCoupon,
@@ -48,6 +48,7 @@ export {
   useUSDCSymbol,
   useApproveUSDC,
   useApproveUSDCMax,
+  useApproveUSDCForMarket,
 } from './useUSDC';
 
 // Combined helper hooks
@@ -75,3 +76,21 @@ export {
   type MaturePoolInfo,
 } from './useMaturePools';
 
+// BondMarketV2 hooks (P2P Marketplace)
+export {
+  useMatchOrder,
+  useCancelOrder,
+  useIsValidNonce,
+  useMarketUSDC,
+} from './useBondMarketV2';
+
+// EIP-712 Signing hooks
+export {
+  useSignOrder,
+  type OrderData,
+} from './useSignOrder';
+
+// Bond Token Approval
+export {
+  useApproveBondToken,
+} from './useApproveBondToken';

@@ -60,3 +60,38 @@ export function getAddresses(chainId: number, filename: string) {
   };
 }
 
+/**
+ * Get pool addresses from Factory (with pool ID selection)
+ * @param chainId Chain ID
+ * @param poolId Pool ID (optional, defaults to newest pool)
+ * @returns Pool addresses and USDC address
+ */
+export async function getPoolAddresses(chainId: number, poolId?: string) {
+  const addresses = getAddresses(chainId, "bond-factory.json");
+  
+  if (!addresses.pools || Object.keys(addresses.pools).length === 0) {
+    throw new Error("❌ No pools found in bond-factory.json. Create a pool first.");
+  }
+  
+  // Get pool ID
+  let selectedPoolId = poolId;
+  if (!selectedPoolId) {
+    // Get newest pool (highest ID)
+    const poolIds = Object.keys(addresses.pools).sort((a, b) => Number(b) - Number(a));
+    selectedPoolId = poolIds[0];
+  }
+  
+  const pool = addresses.pools[selectedPoolId];
+  if (!pool) {
+    throw new Error(`❌ Pool ${selectedPoolId} not found. Available pools: ${Object.keys(addresses.pools).join(", ")}`);
+  }
+  
+  return {
+    USDC_ADDRESS: addresses.USDC!,
+    BOND_SERIES_ADDRESS: pool.bondSeries,
+    BOND_TOKEN_ADDRESS: pool.bondToken,
+    POOL_ID: selectedPoolId,
+    chainId: chainId
+  };
+}
+

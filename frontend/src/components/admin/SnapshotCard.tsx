@@ -7,13 +7,13 @@ import { useApproveUSDC } from "@/hooks/useUSDC";
 import toast from "react-hot-toast";
 
 export default function SnapshotCard() {
-  const { 
-    latestSnapshot, 
-    lastDistributed, 
-    pendingDistributions, 
-    couponDue 
+  const {
+    latestSnapshot,
+    lastDistributed,
+    pendingDistributions,
+    couponDue
   } = useAdminData();
-  
+
   const { approve, isPending: isApproving, isSuccess: approveSuccess } = useApproveUSDC();
   const { distributeCoupon, isPending: isDistributing, isSuccess: distributeSuccess, hash } = useDistributeCoupon();
 
@@ -31,10 +31,10 @@ export default function SnapshotCard() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Distributed {couponDue} USDC successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${hash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -55,8 +55,8 @@ export default function SnapshotCard() {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-bold mb-4 text-gray-900">📸 Snapshot Management</h3>
-      
+      <h3 className="text-lg font-bold mb-4 text-gray-900">Snapshot Management</h3>
+
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="bg-gray-50 border border-custom rounded-lg p-3">

@@ -35,7 +35,7 @@ export function saveToken(token: LocalTokenInfo) {
     };
     const updated = [...existing, entry];
     localStorage.setItem(key, JSON.stringify(updated));
-    console.log("✅ Token saved locally:", entry);
+
   } catch (err) {
     console.error("❌ Failed to save token:", err);
   }
@@ -64,7 +64,7 @@ export function removeToken(chainId: number, address: string) {
         t.address.toLowerCase() !== address.toLowerCase()
     );
     localStorage.setItem(key, JSON.stringify(filtered));
-    console.log(`🗑️ Removed token ${address}`);
+
   } catch (err) {
     console.error("❌ Failed to remove token:", err);
   }
@@ -76,7 +76,7 @@ export function clearAllTokens() {
     Object.keys(localStorage)
       .filter((k) => k.startsWith("deployedTokens_"))
       .forEach((k) => localStorage.removeItem(k));
-    console.log("🧹 Cleared all local tokens");
+
   } catch (err) {
     console.error("❌ Failed to clear tokens:", err);
   }

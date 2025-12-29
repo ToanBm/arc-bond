@@ -81,7 +81,7 @@ contract BondFactory is AccessControl {
      * @notice Create a new bond pool
      * @param name_ BondToken name (e.g., "Bond 1")
      * @param keeper_ Keeper address for BondSeries
-     * @param maturityMinutes_ Number of minutes until maturity
+     * @param maturityHours_ Number of hours until maturity
      * @return poolId The ID of the newly created pool
      * @return bondToken Address of the deployed BondToken
      * @return bondSeries Address of the deployed BondSeries
@@ -90,7 +90,7 @@ contract BondFactory is AccessControl {
     function createPool(
         string memory name_,
         address keeper_,
-        uint256 maturityMinutes_
+        uint256 maturityHours_
     ) external onlyRole(POOL_CREATOR_ROLE) returns (
         uint256 poolId,
         address bondToken,
@@ -98,7 +98,7 @@ contract BondFactory is AccessControl {
     ) {
         if (bytes(name_).length == 0) revert InvalidName();
         if (keeper_ == address(0)) revert InvalidAddress();
-        if (maturityMinutes_ == 0) revert InvalidMaturityHours();
+        if (maturityHours_ == 0) revert InvalidMaturityHours();
         
         poolCount++;
         poolId = poolCount;
@@ -119,15 +119,18 @@ contract BondFactory is AccessControl {
             bondToken,
             usdc,
             keeper_,
-            maturityMinutes_
+            maturityHours_
         );
         bondSeries = address(newBondSeries);
+        
+        // Set BondSeries address in BondToken (before ownership transfer, Factory is still owner)
+        BondToken(bondToken).setBondSeries(bondSeries);
         
         // Transfer BondToken ownership to BondSeries
         BondToken(bondToken).transferOwnership(bondSeries);
         
         // Calculate maturity date
-        uint256 maturityDate = block.timestamp + (maturityMinutes_ * 1 minutes);
+        uint256 maturityDate = block.timestamp + (maturityHours_ * 1 hours);
         
         // Store pool info
         pools[poolId] = PoolInfo({

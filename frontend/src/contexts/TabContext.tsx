@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type TabType = "details" | "deposit" | "portfolio" | "bridge" | "admin";
+export type TabType = "dashboard" | "deposit" | "market" | "bridge" | "admin";
 
 interface TabContextType {
   activeTab: TabType;
@@ -12,7 +12,7 @@ interface TabContextType {
 const TabContext = createContext<TabContextType | undefined>(undefined);
 
 export function TabProvider({ children }: { children: ReactNode }) {
-  const [activeTab, setActiveTab] = useState<TabType>("deposit");
+  const [activeTab, setActiveTab] = useState<TabType>("dashboard");
 
   return (
     <TabContext.Provider value={{ activeTab, setActiveTab }}>

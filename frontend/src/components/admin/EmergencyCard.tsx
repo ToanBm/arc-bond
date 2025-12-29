@@ -16,10 +16,10 @@ export default function EmergencyCard() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Contract paused successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${pauseHash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${pauseHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -34,10 +34,10 @@ export default function EmergencyCard() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Contract unpaused successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${unpauseHash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${unpauseHash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -61,19 +61,18 @@ export default function EmergencyCard() {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-bold mb-4 text-gray-900">🛑 Emergency Controls</h3>
-      
+      <h3 className="text-lg font-bold mb-4 text-gray-900">Emergency Controls</h3>
+
       <div className="space-y-4">
-        <div className={`p-4 rounded-lg border ${
-          isPaused 
-            ? "bg-red-50 border-red-200" 
-            : "bg-green-50 border-green-200"
-        }`}>
+        <div className={`p-4 rounded-lg border ${isPaused
+          ? "bg-red-50 border-red-200"
+          : "bg-green-50 border-green-200"
+          }`}>
           <div className="font-semibold text-gray-900 mb-1">
-            {isPaused ? "🛑 Contract PAUSED" : "✅ Contract Active"}
+            {isPaused ? "Contract PAUSED" : "✅ Contract Active"}
           </div>
           <div className="text-sm text-gray-600">
-            {isPaused 
+            {isPaused
               ? "New deposits are disabled. Users can still claim and redeem."
               : "All operations are functioning normally."
             }

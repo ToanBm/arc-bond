@@ -1,9 +1,13 @@
 import { ethers } from "hardhat";
-import { getDeployedAddresses } from "./utils/getAddresses";
+import * as fs from "fs";
+import * as path from "path";
+import { getAddresses } from "./utils/getAddresses";
 
 /**
  * Script: View current status of BondSeries
- * Usage: npx hardhat run scripts/00-viewStatus.ts --network arc
+ * Usage: 
+ *   Legacy: npx hardhat run scripts/00-viewStatus.ts --network arc
+ *   Factory: npx hardhat run scripts/00-viewStatus.ts --network arc [--pool-id 1]
  */
 
 async function main() {
@@ -11,13 +15,61 @@ async function main() {
   console.log("=".repeat(60));
 
   const [signer] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
 
-  // Get contract addresses from deployment
-  const addresses = await getDeployedAddresses();
-  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, BOND_TOKEN_ADDRESS } = addresses;
+  // Check which mode: Factory or Legacy
+  const factoryPath = path.join(__dirname, "../deployments/bond-factory.json");
+  const systemPath = path.join(__dirname, "../deployments/bond-system.json");
   
-  console.log("📍 Network:", addresses.chainName, `(Chain ID: ${addresses.chainId})`);
-  console.log("📍 Contracts loaded from deployments/bond-system.json\n");
+  let BOND_SERIES_ADDRESS: string;
+  let BOND_TOKEN_ADDRESS: string;
+  let USDC_ADDRESS: string;
+  let poolId: string | null = null;
+
+  if (fs.existsSync(factoryPath)) {
+    // Factory mode
+    const addresses = getAddresses(chainId, "bond-factory.json");
+    USDC_ADDRESS = addresses.USDC!;
+    
+    // Get pool ID from args or use newest
+    const poolIdArg = process.argv.find(arg => arg.startsWith("--pool-id"));
+    if (poolIdArg) {
+      poolId = poolIdArg.split("=")[1] || process.argv[process.argv.indexOf(poolIdArg) + 1];
+    }
+    
+    if (!poolId) {
+      // Get newest pool
+      const pools = addresses.pools;
+      const poolIds = Object.keys(pools).sort((a, b) => Number(b) - Number(a));
+      poolId = poolIds[0];
+    }
+    
+    if (!poolId || !addresses.pools[poolId]) {
+      throw new Error(`❌ Pool ${poolId || "not found"} not found in bond-factory.json`);
+    }
+    
+    const pool = addresses.pools[poolId];
+    BOND_SERIES_ADDRESS = pool.bondSeries;
+    BOND_TOKEN_ADDRESS = pool.bondToken;
+    
+    console.log("📍 Network:", network.name, `(Chain ID: ${chainId})`);
+    console.log("📍 Mode: Factory (Multiple Pools)");
+    console.log("📍 Pool ID:", poolId);
+    console.log("📍 Contracts loaded from deployments/bond-factory.json\n");
+  } else if (fs.existsSync(systemPath)) {
+    // Legacy mode
+    const addresses = getAddresses(chainId, "bond-system.json");
+    USDC_ADDRESS = addresses.USDC!;
+    BOND_SERIES_ADDRESS = addresses.BondSeries!;
+    BOND_TOKEN_ADDRESS = addresses.BondToken!;
+    
+    console.log("📍 Network:", network.name, `(Chain ID: ${chainId})`);
+    console.log("📍 Mode: Legacy (Single Pool)");
+    console.log("📍 Contracts loaded from deployments/bond-system.json\n");
+  } else {
+    throw new Error("❌ No deployment file found! Run deployBondSystem.ts or deployFactory.ts first.");
+  }
   
   // Get contracts
   const usdc = await ethers.getContractAt("contracts/IERC20.sol:IERC20", USDC_ADDRESS);
@@ -29,8 +81,8 @@ async function main() {
   const maturityDate = seriesInfo[0];
   const totalDeposited = seriesInfo[1];
   const totalSupply = seriesInfo[2];
-  const recordCount = seriesInfo[3];
-  const cumulativeIndex = seriesInfo[4];
+  const currentIndex = seriesInfo[3];
+  const lastDistributionTime = seriesInfo[4];
   const emergencyMode = seriesInfo[5];
   
   // Get treasury status
@@ -38,11 +90,6 @@ async function main() {
   const treasuryBalance = treasuryStatus[0];
   const requiredReserve = treasuryStatus[1];
   const withdrawable = treasuryStatus[2];
-  
-  // Get timing
-  const lastRecordTime = await bondSeries.lastRecordTime();
-  const nextRecordTime = await bondSeries.nextRecordTime();
-  const lastDistributed = await bondSeries.lastDistributedRecord();
   
   const now = Math.floor(Date.now() / 1000);
   
@@ -60,19 +107,28 @@ async function main() {
   console.log("Required Reserve (30%):", ethers.formatUnits(requiredReserve, 6), "USDC");
   console.log("Owner Withdrawable:", ethers.formatUnits(withdrawable, 6), "USDC");
   
-  console.log("\n📸 SNAPSHOT STATUS");
+  console.log("\n📈 COUPON INDEX (Continuous Accrual)");
   console.log("-".repeat(60));
-  console.log("Total Records:", recordCount.toString());
-  console.log("Last Distributed Record:", lastDistributed.toString());
-  console.log("Pending Distribution:", recordCount > lastDistributed ? "⚠️ YES" : "✅ No");
-  console.log("Last Record Time:", new Date(Number(lastRecordTime) * 1000).toISOString());
-  console.log("Next Record Time:", new Date(Number(nextRecordTime) * 1000).toISOString());
-  console.log("Can Record Now:", now >= Number(nextRecordTime) ? "✅ Yes" : "⏳ Not yet");
+  console.log("Current Index:", ethers.formatUnits(currentIndex, 6));
+  console.log("Last Distribution Time:", new Date(Number(lastDistributionTime) * 1000).toISOString());
+  const timeSinceLastDist = now - Number(lastDistributionTime);
+  const daysSinceLastDist = timeSinceLastDist / 86400;
+  const hoursSinceLastDist = timeSinceLastDist / 3600;
+  const minutesSinceLastDist = timeSinceLastDist / 60;
   
-  console.log("\n📈 COUPON INDEX");
-  console.log("-".repeat(60));
-  console.log("Cumulative Index:", ethers.formatUnits(cumulativeIndex, 6));
-  console.log("Total Days Distributed:", Math.round(Number(ethers.formatUnits(cumulativeIndex, 6)) * 1000));
+  if (daysSinceLastDist >= 1) {
+    console.log("Time Since Last Distribution:", daysSinceLastDist.toFixed(2), "days");
+  } else if (hoursSinceLastDist >= 1) {
+    console.log("Time Since Last Distribution:", hoursSinceLastDist.toFixed(2), "hours");
+  } else if (minutesSinceLastDist >= 1) {
+    console.log("Time Since Last Distribution:", minutesSinceLastDist.toFixed(2), "minutes");
+  } else {
+    console.log("Time Since Last Distribution:", timeSinceLastDist, "seconds");
+  }
+  
+  if (timeSinceLastDist > 3 * 86400) {
+    console.log("⚠️ WARNING: More than 3 days since last distribution!");
+  }
   
   console.log("\n👤 YOUR ACCOUNT");
   console.log("-".repeat(60));
@@ -97,17 +153,12 @@ async function main() {
   console.log("-".repeat(60));
   
   if (yourBond === 0n) {
-    console.log("1. Mint USDC: npx hardhat run scripts/01-mintUSDC.ts --network arc");
+    console.log("1. Get USDC from faucet/bridge (if needed)");
     console.log("2. Deposit: npx hardhat run scripts/02-deposit.ts --network arc");
   } else {
-    if (now >= Number(nextRecordTime)) {
-      console.log("✅ You can record snapshot now!");
-      console.log("   npx hardhat run scripts/03-recordSnapshot.ts --network arc");
-    }
-    
-    if (recordCount > lastDistributed) {
-      console.log("⚠️ Pending distribution - owner should distribute coupon!");
-      console.log("   npx hardhat run scripts/04-distributeCoupon.ts --network arc");
+    if (timeSinceLastDist > 3 * 86400) {
+      console.log("⚠️ WARNING: More than 3 days since last distribution!");
+      console.log("   Owner should distribute coupon: npx hardhat run scripts/04-distributeCoupon.ts --network arc");
     }
     
     if (yourClaimable > 0n) {
@@ -118,6 +169,8 @@ async function main() {
     if (now >= Number(maturityDate)) {
       console.log("🔄 You can redeem principal now!");
       console.log("   npx hardhat run scripts/06-redeem.ts --network arc");
+    } else {
+      console.log("💡 Tip: Interest accrues continuously. Check back later to claim!");
     }
   }
   

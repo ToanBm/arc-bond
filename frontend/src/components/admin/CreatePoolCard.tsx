@@ -17,7 +17,7 @@ export default function CreatePoolCard() {
 
   // Form state
   const [poolName, setPoolName] = useState("");
-  const [maturityMinutes, setMaturityMinutes] = useState("15"); // 15 minutes default for testing
+  const [maturityHours, setMaturityHours] = useState("168"); // 168 hours (1 week) default
 
   // Check if factory exists
   const hasFactory = (() => {
@@ -62,12 +62,12 @@ export default function CreatePoolCard() {
       );
       // Reset form
       setPoolName("");
-      setMaturityMinutes("15");
+      setMaturityHours("168");
     }
   }, [isSuccess, hash, refetchPools]);
 
   const handleCreatePool = () => {
-    if (!poolName.trim() || !maturityMinutes) {
+    if (!poolName.trim() || !maturityHours) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -77,9 +77,9 @@ export default function CreatePoolCard() {
       return;
     }
 
-    const minutes = parseInt(maturityMinutes);
-    if (isNaN(minutes) || minutes <= 0) {
-      toast.error("Maturity minutes must be a positive number");
+    const hours = parseInt(maturityHours);
+    if (isNaN(hours) || hours <= 0) {
+      toast.error("Maturity hours must be a positive number");
       return;
     }
 
@@ -87,14 +87,14 @@ export default function CreatePoolCard() {
     createPool(
       poolName.trim(),
       address,
-      minutes
+      hours
     );
   };
 
   if (!hasFactory) {
     return (
       <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">🏊 Create New Pool</h3>
+        <h3 className="text-lg font-bold mb-4 text-gray-900">Create New Pool</h3>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-gray-700">
           ⚠️ BondFactory not deployed. Please deploy factory first using:
           <code className="block mt-2 p-2 bg-gray-100 rounded">
@@ -108,7 +108,7 @@ export default function CreatePoolCard() {
   if (checkingRole) {
     return (
       <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">🏊 Create New Pool</h3>
+        <h3 className="text-lg font-bold mb-4 text-gray-900">Create New Pool</h3>
         <div className="text-gray-500">Checking permissions...</div>
       </div>
     );
@@ -117,7 +117,7 @@ export default function CreatePoolCard() {
   if (!isPoolCreator) {
     return (
       <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">🏊 Create New Pool</h3>
+        <h3 className="text-lg font-bold mb-4 text-gray-900">Create New Pool</h3>
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-gray-700">
           ❌ You don&apos;t have POOL_CREATOR_ROLE. Contact admin to grant permission.
         </div>
@@ -128,7 +128,7 @@ export default function CreatePoolCard() {
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900">🏊 Create New Pool</h3>
+        <h3 className="text-lg font-bold text-gray-900">Create New Pool</h3>
         {poolCount !== undefined && (
           <div className="text-sm text-gray-600">
             Current Pools: {poolCount?.toString() || "0"}
@@ -152,35 +152,27 @@ export default function CreatePoolCard() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Maturity Minutes
+            Maturity Hours
           </label>
           <input
             type="number"
-            value={maturityMinutes}
-            onChange={(e) => setMaturityMinutes(e.target.value)}
-            placeholder="15"
+            value={maturityHours}
+            onChange={(e) => setMaturityHours(e.target.value)}
+            placeholder="168"
             min="1"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="text-xs text-gray-500 mt-1">
-            {maturityMinutes && !isNaN(parseInt(maturityMinutes))
-              ? `${parseInt(maturityMinutes)} minutes`
-              : "Enter minutes (e.g., 15 = 15 minutes)"}
+            {maturityHours && !isNaN(parseInt(maturityHours))
+              ? `${parseInt(maturityHours)} hours`
+              : "Enter hours (e.g., 168 = 1 week)"}
           </div>
         </div>
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-gray-700">
-          <div className="font-semibold mb-1">ℹ️ After creating pool:</div>
-          <ol className="list-decimal list-inside space-y-1 text-xs">
-            <li>Wait for transaction confirmation</li>
-            <li>Pool list will update automatically (no need to run genabi)</li>
-            <li>Update backend .env if needed for keeper service</li>
-          </ol>
-        </div>
 
         <button
           onClick={handleCreatePool}
-          disabled={isLoading || !poolName.trim() || !maturityMinutes.trim() || !address}
+          disabled={isLoading || !poolName.trim() || !maturityHours.trim() || !address}
           className="w-full btn-primary font-medium py-2 px-4 disabled:opacity-50"
         >
           {isLoading ? "Creating Pool..." : "Create Pool"}

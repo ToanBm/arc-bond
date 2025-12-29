@@ -9,6 +9,7 @@ const __dirname = dirname(__filename);
 // Path: từ frontend/scripts lên arc-00, vào contracts
 const contractsDir = path.resolve(__dirname, "../../contracts");
 const deploymentsDir = path.join(contractsDir, "deployments");
+const artifactsDir = path.join(contractsDir, "artifacts", "contracts");
 
 // Output: frontend/src/abi
 const outdir = path.resolve(__dirname, "../src/abi");
@@ -48,23 +49,63 @@ if (hasBondSystem && hasBondFactory) {
   process.exit(1);
 }
 
-// Try to load bond-system.json first, fallback to bond-factory.json for ABIs
+// Load deployment data for addresses only
 if (hasBondSystem) {
   bondSystemData = JSON.parse(fs.readFileSync(bondSystemFile, "utf-8"));
   console.log(`✅ Loaded bond-system.json`);
 } else if (hasBondFactory) {
   bondSystemData = JSON.parse(fs.readFileSync(bondFactoryFile, "utf-8"));
-  console.log(`✅ Loaded bond-factory.json (for ABIs)`);
+  console.log(`✅ Loaded bond-factory.json`);
+}
+
+// Helper function to read ABI from deployment JSON (preferred) or artifacts (fallback)
+function readABI(contractName, deploymentData) {
+  // Try to read from deployment JSON first
+  if (deploymentData && deploymentData.abis && deploymentData.abis[contractName]) {
+    return deploymentData.abis[contractName];
+  }
+  
+  // Fallback to artifacts if not in deployment JSON
+  const artifactPath = path.join(artifactsDir, `${contractName}.sol`, `${contractName}.json`);
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error(`ABI not found for ${contractName} in deployment JSON or artifacts.\nPlease deploy contracts first or compile: cd contracts && npx hardhat compile`);
+  }
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
+  return artifact.abi;
+}
+
+// Helper function to read IERC20 ABI from deployment JSON or artifacts
+function readIERC20ABI(deploymentData) {
+  // Try deployment JSON first
+  if (deploymentData && deploymentData.abis && deploymentData.abis.USDC) {
+    return deploymentData.abis.USDC;
+  }
+  
+  // Fallback to artifacts
+  const artifactPath = path.join(artifactsDir, "IERC20.sol", "IERC20.json");
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error(`IERC20 ABI not found in deployment JSON or artifacts.\nPlease deploy contracts first or compile: cd contracts && npx hardhat compile`);
+  }
+  const artifact = JSON.parse(fs.readFileSync(artifactPath, "utf-8"));
+  return artifact.abi;
 }
 
 // ===================== Generate BondSeriesABI =====================
 console.log("\n📝 Generating BondSeries...");
 
+// Get deployment data for ABI (prefer bond-factory.json, fallback to bond-system.json)
+let abiSourceData = null;
+if (hasBondFactory) {
+  abiSourceData = JSON.parse(fs.readFileSync(bondFactoryFile, "utf-8"));
+} else if (hasBondSystem) {
+  abiSourceData = bondSystemData;
+}
+
 const bondSeriesABI = `/*
   This file is auto-generated.
   Command: 'npm run genabi'
 */
-export const BondSeriesABI = ${JSON.stringify({ abi: bondSystemData.abis.BondSeries }, null, 2)} as const;
+export const BondSeriesABI = ${JSON.stringify({ abi: readABI("BondSeries", abiSourceData) }, null, 2)} as const;
 `;
 
 fs.writeFileSync(path.join(outdir, "BondSeriesABI.ts"), bondSeriesABI, "utf-8");
@@ -78,15 +119,15 @@ if (hasBondSystem) {
 */
 export const BondSeriesAddresses = {
 ${Object.entries(bondSystemData)
-  .filter(([key]) => key !== "abis")
-  .filter(([chainId, data]) => data.contracts?.BondSeries?.address)
-  .map(([chainId, data]) => `  "${chainId}": {
+      .filter(([key]) => key !== "abis")
+      .filter(([chainId, data]) => data.contracts?.BondSeries?.address)
+      .map(([chainId, data]) => `  "${chainId}": {
     chainId: ${data.chainId},
     chainName: "${data.chainName}",
     address: "${data.contracts.BondSeries.address}" as const,
     maturityHours: ${data.contracts.BondSeries.maturityHours || 336}
   }`)
-  .join(",\n")}
+      .join(",\n")}
 } as const;
 
 export function getBondSeriesAddress(chainId: number): \`0x\${string}\` {
@@ -111,7 +152,7 @@ const bondTokenABI = `/*
   This file is auto-generated.
   Command: 'npm run genabi'
 */
-export const BondTokenABI = ${JSON.stringify({ abi: bondSystemData.abis.BondToken }, null, 2)} as const;
+export const BondTokenABI = ${JSON.stringify({ abi: readABI("BondToken", abiSourceData) }, null, 2)} as const;
 `;
 
 fs.writeFileSync(path.join(outdir, "BondTokenABI.ts"), bondTokenABI, "utf-8");
@@ -125,9 +166,9 @@ if (hasBondSystem) {
 */
 export const BondTokenAddresses = {
 ${Object.entries(bondSystemData)
-  .filter(([key]) => key !== "abis")
-  .filter(([chainId, data]) => data.contracts?.BondToken?.address)
-  .map(([chainId, data]) => `  "${chainId}": {
+      .filter(([key]) => key !== "abis")
+      .filter(([chainId, data]) => data.contracts?.BondToken?.address)
+      .map(([chainId, data]) => `  "${chainId}": {
     chainId: ${data.chainId},
     chainName: "${data.chainName}",
     address: "${data.contracts.BondToken.address}" as const,
@@ -135,7 +176,7 @@ ${Object.entries(bondSystemData)
     name: "${data.contracts.BondToken.name || "ArcBond USDC"}",
     symbol: "${data.contracts.BondToken.symbol || "arcUSDC"}"
   }`)
-  .join(",\n")}
+      .join(",\n")}
 } as const;
 
 export function getBondTokenAddress(chainId: number): \`0x\${string}\` {
@@ -160,7 +201,7 @@ const usdcABI = `/*
   This file is auto-generated.
   Command: 'npm run genabi'
 */
-export const USDCABI = ${JSON.stringify({ abi: bondSystemData.abis.USDC }, null, 2)} as const;
+export const USDCABI = ${JSON.stringify({ abi: readIERC20ABI(abiSourceData) }, null, 2)} as const;
 `;
 
 fs.writeFileSync(path.join(outdir, "USDCABI.ts"), usdcABI, "utf-8");
@@ -173,9 +214,9 @@ const usdcAddresses = `/*
 */
 export const USDCAddresses = {
 ${Object.entries(bondSystemData)
-  .filter(([key]) => key !== "abis")
-  .filter(([chainId, data]) => data.contracts?.USDC?.address)
-  .map(([chainId, data]) => `  "${chainId}": {
+    .filter(([key]) => key !== "abis")
+    .filter(([chainId, data]) => data.contracts?.USDC?.address)
+    .map(([chainId, data]) => `  "${chainId}": {
     chainId: ${data.chainId},
     chainName: "${data.chainName}",
     address: "${data.contracts.USDC.address}" as const,
@@ -183,7 +224,7 @@ ${Object.entries(bondSystemData)
     name: "${data.contracts.USDC.name || "USDC"}",
     symbol: "${data.contracts.USDC.symbol || "USDC"}"
   }`)
-  .join(",\n")}
+    .join(",\n")}
 } as const;
 
 export function getUSDCAddress(chainId: number): \`0x\${string}\` {
@@ -201,7 +242,7 @@ console.log(`✅ Generated USDCAddresses.ts`);
 // ===================== Generate BondFactory =====================
 if (hasBondFactory) {
   console.log("\n📝 Generating BondFactory...");
-  
+
   const bondFactoryData = JSON.parse(fs.readFileSync(bondFactoryFile, "utf-8"));
   console.log(`✅ Loaded bond-factory.json`);
 
@@ -210,7 +251,7 @@ if (hasBondFactory) {
   This file is auto-generated.
   Command: 'npm run genabi'
 */
-export const BondFactoryABI = ${JSON.stringify({ abi: bondFactoryData.abis.BondFactory }, null, 2)} as const;
+export const BondFactoryABI = ${JSON.stringify({ abi: readABI("BondFactory", bondFactoryData) }, null, 2)} as const;
 `;
 
   fs.writeFileSync(path.join(outdir, "BondFactoryABI.ts"), bondFactoryABI, "utf-8");
@@ -223,13 +264,13 @@ export const BondFactoryABI = ${JSON.stringify({ abi: bondFactoryData.abis.BondF
 */
 export const BondFactoryAddresses = {
 ${Object.entries(bondFactoryData)
-  .filter(([key]) => key !== "abis")
-  .map(([chainId, data]) => `  "${chainId}": {
+      .filter(([key]) => key !== "abis")
+      .map(([chainId, data]) => `  "${chainId}": {
     chainId: ${data.chainId},
     chainName: "${data.chainName}",
     address: "${data.contracts.BondFactory.address}" as const
   }`)
-  .join(",\n")}
+      .join(",\n")}
 } as const;
 
 export function getBondFactoryAddress(chainId: number): \`0x\${string}\` {
@@ -262,12 +303,12 @@ export type PoolInfo = {
 
 export const PoolsAddresses = {
 ${Object.entries(bondFactoryData)
-  .filter(([key]) => key !== "abis")
-  .map(([chainId, data]) => {
-    const pools = data.contracts.pools || {};
-    const poolsEntries = Object.entries(pools)
-      .map(([poolId, pool]) => {
-        return `    "${poolId}": {
+      .filter(([key]) => key !== "abis")
+      .map(([chainId, data]) => {
+        const pools = data.contracts.pools || {};
+        const poolsEntries = Object.entries(pools)
+          .map(([poolId, pool]) => {
+            return `    "${poolId}": {
       poolId: "${pool.poolId}",
       name: "${pool.name.replace(/"/g, '\\"')}",
       symbol: "${pool.symbol.replace(/"/g, '\\"')}",
@@ -277,18 +318,18 @@ ${Object.entries(bondFactoryData)
       createdAt: "${pool.createdAt}",
       isActive: ${pool.isActive}
     }`;
-      })
-      .join(",\n");
-    
-    return `  "${chainId}": {
+          })
+          .join(",\n");
+
+        return `  "${chainId}": {
     chainId: ${data.chainId},
     chainName: "${data.chainName}",
     pools: {
 ${poolsEntries}
     }
   }`;
-  })
-  .join(",\n")}
+      })
+      .join(",\n")}
 } as const;
 
 export function getPools(chainId: number): Record<string, PoolInfo> {
@@ -314,6 +355,58 @@ export function getAllPoolIds(chainId: number): string[] {
   console.log(`✅ Generated PoolsAddresses.ts`);
 } else {
   console.log("\n⚠️  bond-factory.json not found, skipping BondFactory generation");
+}
+
+// ===================== Generate BondMarketV2 =====================
+const bondMarketV2File = path.join(deploymentsDir, "bond-market-v2.json");
+if (fs.existsSync(bondMarketV2File)) {
+  console.log("\n📝 Generating BondMarketV2...");
+
+  const bondMarketV2Data = JSON.parse(fs.readFileSync(bondMarketV2File, "utf-8"));
+  console.log(`✅ Loaded bond-market-v2.json`);
+
+  // Generate BondMarketV2ABI
+  const bondMarketV2ABI = `/*
+  This file is auto-generated.
+  Command: 'npm run genabi'
+*/
+export const BondMarketV2ABI = ${JSON.stringify({ abi: readABI("BondMarketV2", bondMarketV2Data) }, null, 2)} as const;
+`;
+
+  fs.writeFileSync(path.join(outdir, "BondMarketV2ABI.ts"), bondMarketV2ABI, "utf-8");
+  console.log(`✅ Generated BondMarketV2ABI.ts`);
+
+  // Generate BondMarketV2Addresses
+  const bondMarketV2Addresses = `/*
+  This file is auto-generated.
+  Command: 'npm run genabi'
+*/
+export const BondMarketV2Addresses = {
+${Object.entries(bondMarketV2Data)
+      .filter(([key]) => key !== "abi")
+      .map(([chainId, data]) => `  "${chainId}": {
+    chainId: ${data.chainId},
+    chainName: "${data.chainName}",
+    address: "${data.marketAddress}" as const,
+    usdcAddress: "${data.usdcAddress}" as const,
+    version: "${data.version}"
+  }`)
+      .join(",\n")}
+} as const;
+
+export function getBondMarketV2Address(chainId: number): \`0x\${string}\` {
+  const chain = BondMarketV2Addresses[chainId.toString() as keyof typeof BondMarketV2Addresses];
+  if (!chain) {
+    throw new Error(\`BondMarketV2 not deployed on chain \${chainId}\`);
+  }
+  return chain.address;
+}
+`;
+
+  fs.writeFileSync(path.join(outdir, "BondMarketV2Addresses.ts"), bondMarketV2Addresses, "utf-8");
+  console.log(`✅ Generated BondMarketV2Addresses.ts`);
+} else {
+  console.log("\n⚠️  bond-market-v2.json not found, skipping BondMarketV2 generation");
 }
 
 // ===================== Generate contracts.ts (tổng hợp) =====================

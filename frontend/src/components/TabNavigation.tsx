@@ -8,57 +8,36 @@ export const TabNavigation = () => {
   const { activeTab, setActiveTab } = useTab();
   const { address } = useAccount();
   const { data: isAdmin } = useIsAdmin(address);
-  
+
+  const tabs = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "deposit", label: "Deposit" },
+    { id: "market", label: "Market" },
+    { id: "bridge", label: "Bridge" },
+  ];
+
   return (
     <div className="flex gap-2">
-      <button
-        onClick={() => setActiveTab("deposit")}
-        className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base ${
-          activeTab === "deposit"
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id as any)}
+          className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base rounded-md ${activeTab === tab.id
             ? "btn-primary text-white"
-            : "text-gray-900 btn-transparent"
-        }`}
-      >
-        Deposit
-      </button>
-      <button
-        onClick={() => setActiveTab("portfolio")}
-        className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base ${
-          activeTab === "portfolio"
-            ? "btn-primary text-white"
-            : "text-gray-900 btn-transparent"
-        }`}
-      >
-        Portfolio
-      </button>
-      <button
-        onClick={() => setActiveTab("details")}
-        className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base ${
-          activeTab === "details"
-            ? "btn-primary text-white"
-            : "text-gray-900 btn-transparent"
-        }`}
-      >
-        Details
-      </button>
-      <button
-        onClick={() => setActiveTab("bridge")}
-        className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base ${
-          activeTab === "bridge"
-            ? "btn-primary text-white"
-            : "text-gray-900 btn-transparent"
-        }`}
-      >
-        Bridge
-      </button>
+            : "text-gray-900 hover:bg-gray-100"
+            }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+
       {isAdmin && (
         <button
           onClick={() => setActiveTab("admin")}
-          className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base ${
-            activeTab === "admin"
-              ? "btn-primary text-white"
-              : "text-gray-900 btn-transparent"
-          }`}
+          className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base rounded-md ${activeTab === "admin"
+            ? "btn-primary text-white"
+            : "text-gray-900 hover:bg-gray-100"
+            }`}
         >
           Admin
         </button>
@@ -66,4 +45,3 @@ export const TabNavigation = () => {
     </div>
   );
 };
-

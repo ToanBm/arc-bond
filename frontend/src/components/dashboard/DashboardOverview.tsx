@@ -1,111 +1,99 @@
 "use client";
 
 import { useDashboardData } from "@/hooks";
-import { useTreasuryStatus, useBondSeriesInfo } from "@/hooks/useBondSeries";
+import { useTreasuryStatus } from "@/hooks/useBondSeries";
 import { formatUnits } from "viem";
-import HealthStatus from "./HealthStatus";
 
 export default function DashboardOverview() {
-  const { 
-    totalDeposited, 
-    totalSupply,
-    timeToMaturity, 
-    isLoading 
+  const {
+    totalDeposited,
+    timeToMaturity,
+    isLoading,
+    pendingDistributions,
+    emergencyMode
   } = useDashboardData();
-  
+
   const { data: treasuryStatus } = useTreasuryStatus();
-  const { data: seriesInfo } = useBondSeriesInfo();
-  
+
   // Treasury metrics
   const treasuryBalance = treasuryStatus?.[0] ? formatUnits(treasuryStatus[0], 6) : "0";
-  const reserved = treasuryStatus?.[1] ? formatUnits(treasuryStatus[1], 6) : "0";
-  const withdrawable = treasuryStatus?.[2] ? formatUnits(treasuryStatus[2], 6) : "0";
-  
+
   // Calculate metrics
-  const solvencyRatio = parseFloat(totalDeposited) > 0 
+  const solvencyRatio = parseFloat(totalDeposited) > 0
     ? ((parseFloat(treasuryBalance) / parseFloat(totalDeposited)) * 100).toFixed(0)
     : "0";
-  
-  // Total AUM (Assets Under Management)
-  const tvl = totalDeposited;
-  
-  // Total Coupons Paid = Cumulative Index × Total Supply
-  const cumulativeIndex = seriesInfo?.[4] ? formatUnits(seriesInfo[4], 6) : "0";
-  const totalCouponsPaid = (parseFloat(cumulativeIndex) * parseFloat(totalSupply)).toFixed(2);
-  
-  // Record count
-  const recordCount = seriesInfo?.[3]?.toString() ?? "0";
-  
-  // APY
+
+  // APY (Fixed for now)
   const apy = "365%";
+
+  // --- Health Status Logic ---
+  const getStatusColor = () => {
+    if (emergencyMode) return "text-red-600 bg-red-50 border-red-200";
+    if (pendingDistributions >= 3) return "text-orange-600 bg-orange-50 border-orange-200";
+    if (pendingDistributions >= 1) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+    return "text-green-600 bg-green-50 border-green-200";
+  };
+
+  const getStatusIcon = () => {
+    if (emergencyMode) return "🚨";
+    if (pendingDistributions >= 3) return "⚠️";
+    if (pendingDistributions >= 1) return "⚠️";
+    return "✅";
+  };
+
+  const getStatusText = () => {
+    if (emergencyMode) return "EMERGENCY MODE: Owner defaulted!";
+    if (pendingDistributions >= 3) return "CRITICAL: 3+ snapshots without distribution";
+    if (pendingDistributions >= 1) return "WARNING: Pending distribution";
+    return "System Healthy"; // Shortened for cleaner UI
+  };
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="card">
-          <div className="text-gray-500">Loading...</div>
-        </div>
+      <div className="card">
+        <div className="text-gray-500 text-center py-4">Loading stats...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-[60%] mx-auto space-y-6">
-      {/* Health Status */}
-      <HealthStatus />
-      
-      {/* Primary Metrics */}
-      <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">Key Metrics</h3>
-        <div className="bg-gray-50 border border-custom rounded-lg p-4">
-          <div className="grid grid-cols-4 gap-6">
-            <MetricItem label="Total AUM" value={tvl} unit="USDC" />
-            <MetricItem label="Total Supply" value={totalSupply} unit="arcUSDC" />
-            <MetricItem label="APY" value={apy} unit="" />
-            <MetricItem label="Solvency Ratio" value={`${solvencyRatio}%`} unit="" />
-          </div>
+    <div className="space-y-6">
+      {/* Header outside card */}
+      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 px-1 min-h-[40px]">
+        <h3 className="text-xl font-bold text-gray-900">Market Status</h3>
+
+        {/* Health Badge */}
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${getStatusColor()}`}>
+          <span>{getStatusIcon()}</span>
+          <span className="font-semibold text-sm">{getStatusText()}</span>
         </div>
       </div>
-      
-      {/* Treasury Details */}
+
+      {/* Metrics Card */}
       <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">Treasury Details</h3>
-        <div className="bg-gray-50 border border-custom rounded-lg p-4">
-          <div className="grid grid-cols-3 gap-6">
-            <MetricItem label="Treasury Balance" value={treasuryBalance} unit="USDC" />
-            <MetricItem label="Reserved (30%)" value={reserved} unit="USDC" />
-            <MetricItem label="Owner Withdrawable" value={withdrawable} unit="USDC" />
-          </div>
-        </div>
-      </div>
-      
-      {/* Activity Metrics */}
-      <div className="card">
-        <h3 className="text-lg font-bold mb-4 text-gray-900">Activity</h3>
-        <div className="bg-gray-50 border border-custom rounded-lg p-4">
-          <div className="grid grid-cols-3 gap-6">
-            <MetricItem label="Snapshots Recorded" value={recordCount} unit="" />
-            <MetricItem label="Total Coupons Paid" value={totalCouponsPaid} unit="USDC" />
-            <MetricItem 
-              label={timeToMaturity === 'Matured' ? 'Status' : 'Time to Maturity'} 
-              value={timeToMaturity === 'Matured' ? '✅ Matured' : timeToMaturity} 
-              unit="" 
-            />
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <MetricItem label="TVL" value={totalDeposited} unit="USDC" />
+          <MetricItem label="APY" value={apy} unit="" />
+          <MetricItem label="Solvency" value={`${solvencyRatio}%`} unit="" />
+          <MetricItem
+            label="Maturity"
+            value={timeToMaturity === 'Matured' ? 'Ended' : timeToMaturity}
+            unit=""
+            highlight={timeToMaturity === 'Matured'}
+          />
         </div>
       </div>
     </div>
   );
 }
 
-function MetricItem({ label, value, unit }: { label: string; value: string; unit: string }) {
+function MetricItem({ label, value, unit, highlight }: { label: string; value: string; unit: string, highlight?: boolean }) {
   return (
     <div className="text-center">
       <div className="text-sm text-gray-600 mb-2">{label}</div>
-      <div className="text-lg font-bold text-gray-900">
-        {value} {unit && <span className="text-sm text-gray-500">{unit}</span>}
+      <div className={`text-lg font-bold ${highlight ? 'text-green-600' : 'text-gray-900'}`}>
+        {value} <span className="text-sm text-gray-500">{unit}</span>
       </div>
     </div>
   );
 }
-

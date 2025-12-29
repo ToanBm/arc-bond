@@ -270,6 +270,19 @@ export const BondTokenABI = {
       "type": "function"
     },
     {
+      "inputs": [],
+      "name": "bondSeries",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "inputs": [
         {
           "internalType": "address",
@@ -347,6 +360,19 @@ export const BondTokenABI = {
     {
       "inputs": [],
       "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "bondSeries_",
+          "type": "address"
+        }
+      ],
+      "name": "setBondSeries",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"

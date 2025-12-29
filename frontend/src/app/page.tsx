@@ -3,11 +3,11 @@
 import { useTab } from "@/contexts/TabContext";
 import { useIsAdmin } from "@/hooks";
 import { useAccount } from "wagmi";
-import DetailsPage from "@/components/dashboard/DashboardOverview";
-import DepositPage from "@/components/dashboard/Dashboard";
-import Portfolio from "@/components/portfolio/Portfolio";
-import BridgePage from "@/components/bridge/Bridge";
-import Admin from "@/components/admin/Admin";
+import DashboardMain from "@/components/dashboard/DashboardMain";
+import Bridge from "@/components/bridge/Bridge";
+import AdminPanel from "@/components/admin/Admin";
+import Deposit from "@/components/trade/Deposit";
+import Market from "@/components/market/Market";
 
 export default function Home() {
   const { activeTab } = useTab();
@@ -16,11 +16,11 @@ export default function Home() {
 
   return (
     <>
-      {activeTab === "details" && <DetailsPage />}
-      {activeTab === "deposit" && <DepositPage />}
-      {activeTab === "portfolio" && <Portfolio />}
-      {activeTab === "bridge" && <BridgePage />}
-      {activeTab === "admin" && isAdmin && <Admin />}
+      {activeTab === "dashboard" && <DashboardMain />}
+      {activeTab === "deposit" && <Deposit />}
+      {activeTab === "market" && <Market />}
+      {activeTab === "bridge" && <Bridge />}
+      {activeTab === "admin" && isAdmin && <AdminPanel />}
     </>
   );
 }

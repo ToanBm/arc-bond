@@ -219,7 +219,7 @@ export const BondFactoryABI = {
         },
         {
           "internalType": "uint256",
-          "name": "maturityMinutes_",
+          "name": "maturityHours_",
           "type": "uint256"
         }
       ],

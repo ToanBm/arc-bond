@@ -14,14 +14,15 @@ function useBondTokenAddress() {
  */
 
 // Get user arcUSDC balance
-export function useBondTokenBalance(address?: `0x${string}`) {
-  const bondTokenAddress = useBondTokenAddress();
+export function useBondTokenBalance(address?: `0x${string}`, bondTokenAddressOverride?: `0x${string}`) {
+  const bondTokenAddressFromContext = useBondTokenAddress();
+  const bondTokenAddress = bondTokenAddressOverride || bondTokenAddressFromContext;
   return useReadContract({
     address: bondTokenAddress,
     abi: ABIs.BondToken,
     functionName: 'balanceOf',
     args: address ? [address] : undefined,
-    query: { 
+    query: {
       enabled: !!bondTokenAddress && !!address,
       refetchInterval: 30000, // Refetch every 30s as backup
     },
@@ -40,8 +41,9 @@ export function useBondTokenTotalSupply() {
 }
 
 // Get decimals
-export function useBondTokenDecimals() {
-  const bondTokenAddress = useBondTokenAddress();
+export function useBondTokenDecimals(bondTokenAddressOverride?: `0x${string}`) {
+  const bondTokenAddressFromContext = useBondTokenAddress();
+  const bondTokenAddress = bondTokenAddressOverride || bondTokenAddressFromContext;
   return useReadContract({
     address: bondTokenAddress,
     abi: ABIs.BondToken,
@@ -51,8 +53,9 @@ export function useBondTokenDecimals() {
 }
 
 // Get symbol
-export function useBondTokenSymbol() {
-  const bondTokenAddress = useBondTokenAddress();
+export function useBondTokenSymbol(bondTokenAddressOverride?: `0x${string}`) {
+  const bondTokenAddressFromContext = useBondTokenAddress();
+  const bondTokenAddress = bondTokenAddressOverride || bondTokenAddressFromContext;
   return useReadContract({
     address: bondTokenAddress,
     abi: ABIs.BondToken,

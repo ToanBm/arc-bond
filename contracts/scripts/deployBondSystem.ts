@@ -35,21 +35,28 @@ async function main() {
 
   // ==================== 3. Deploy BondSeries ====================
   console.log("3️⃣ Deploying BondSeries...");
-  const MATURITY_MINUTES = 10080; // 1 week for production (168 hours)
+  const MATURITY_HOURS = 168; // 1 week (168 hours)
   const BondSeries = await ethers.getContractFactory("BondSeries");
   const bondSeries = await BondSeries.deploy(
     bondTokenAddress,
     usdcAddress,
     deployer.address, // Keeper (can change later)
-    MATURITY_MINUTES
+    MATURITY_HOURS
   );
   await bondSeries.waitForDeployment();
   const bondSeriesAddress = await bondSeries.getAddress();
   console.log("✅ BondSeries deployed to:", bondSeriesAddress);
   console.log("");
 
-  // ==================== 4. Transfer BondToken Ownership ====================
-  console.log("4️⃣ Transferring BondToken ownership to BondSeries...");
+  // ==================== 4. Set BondSeries Address in BondToken ====================
+  console.log("4️⃣ Setting BondSeries address in BondToken...");
+  const setBondSeriesTx = await bondToken.setBondSeries(bondSeriesAddress);
+  await setBondSeriesTx.wait();
+  console.log("✅ BondSeries address set in BondToken");
+  console.log("");
+
+  // ==================== 5. Transfer BondToken Ownership ====================
+  console.log("5️⃣ Transferring BondToken ownership to BondSeries...");
   const transferTx = await bondToken.transferOwnership(bondSeriesAddress);
   await transferTx.wait();
   console.log("✅ Ownership transferred");
@@ -82,7 +89,7 @@ async function main() {
       },
       BondSeries: {
         address: bondSeriesAddress,
-        maturityMinutes: MATURITY_MINUTES
+        maturityHours: MATURITY_HOURS
       }
     }
   };
@@ -101,9 +108,9 @@ async function main() {
   console.log("");
 
   // ==================== Summary ====================
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log("🎉 ArcBond System Deployed Successfully!");
-  console.log("=" .repeat(60));
+  console.log("=".repeat(60));
   console.log("");
   console.log("📋 Contract Addresses:");
   console.log("   USDC (Arc):  ", usdcAddress);
@@ -113,22 +120,22 @@ async function main() {
   console.log("⚙️  Configuration:");
   console.log("   Mint Ratio:  1 USDC → 10 arcUSDC");
   console.log("   Decimals:    6 (arcUSDC) = 6 (USDC) - Zero precision loss!");
-  console.log("   Coupon Rate: 1% per day (365% APY)");
-  console.log("   Snapshot:    Every 5 minutes (for testing)");
-  console.log("   Maturity:    " + MATURITY_MINUTES + " minutes");
+  console.log("   Interest Rate: 1% per day (0.001 USDC per token per day)");
+  console.log("   Interest:    Continuous accrual (no snapshot required)");
+  console.log("   Maturity:    " + MATURITY_HOURS + " hours");
   console.log("   Reserve:     30%");
-  console.log("   Cap:         100,000 USDC");
+  console.log("   Cap:         10,000 USDC");
   console.log("");
   console.log("🔑 Roles:");
   console.log("   Owner:       ", deployer.address);
-  console.log("   Keeper:      ", deployer.address);
   console.log("");
   console.log("📝 Next Steps:");
   console.log("   1. Copy addresses to .env file");
-  console.log("   2. Update keeper address if using backend automation");
-  console.log("   3. Get USDC from Arc faucet or bridge");
-  console.log("   4. Approve USDC: await usdc.approve(bondSeriesAddress, amount)");
-  console.log("   5. Test deposit: await bondSeries.deposit(100e6)");
+  console.log("   2. Get USDC from Arc faucet or bridge");
+  console.log("   3. Approve USDC: await usdc.approve(bondSeriesAddress, amount)");
+  console.log("   4. Test deposit: await bondSeries.deposit(100e6)");
+  console.log("   5. Owner distribute interest: await bondSeries.distributeInterest(amount)");
+  console.log("   6. Users claim: await bondSeries.claimInterest()");
   console.log("");
   console.log("🔗 Explorer:");
   console.log("   https://testnet.arcscan.app/address/" + bondSeriesAddress);

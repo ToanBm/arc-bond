@@ -1,19 +1,29 @@
 import { ethers } from "hardhat";
-import { getDeployedAddresses } from "./utils/getAddresses";
+import { getPoolAddresses } from "./utils/getAddresses";
 
 /**
  * Script: Redeem BondTokens for USDC principal at maturity
- * Usage: npx hardhat run scripts/06-redeem.ts --network arc
+ * Usage: 
+ *   npx hardhat run scripts/06-redeem.ts --network arc
+ *   npx hardhat run scripts/06-redeem.ts --network arc --pool-id 1
  */
 
 async function main() {
   console.log("🔄 Redeeming BondTokens...\n");
 
   const [signer] = await ethers.getSigners();
+  const network = await ethers.provider.getNetwork();
+  const chainId = Number(network.chainId);
+  
+  // Get pool ID from args
+  const poolIdArg = process.argv.find(arg => arg.startsWith("--pool-id"));
+  const poolId = poolIdArg ? (poolIdArg.split("=")[1] || process.argv[process.argv.indexOf(poolIdArg) + 1]) : undefined;
+  
   console.log("📍 Your address:", signer.address);
 
-  // Get contract addresses from deployment
-  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, BOND_TOKEN_ADDRESS } = await getDeployedAddresses();
+  // Get contract addresses from Factory
+  const { USDC_ADDRESS, BOND_SERIES_ADDRESS, BOND_TOKEN_ADDRESS, POOL_ID } = await getPoolAddresses(chainId, poolId);
+  console.log("📍 Pool ID:", POOL_ID);
   
   // Get contracts
   const usdc = await ethers.getContractAt("contracts/IERC20.sol:IERC20", USDC_ADDRESS);

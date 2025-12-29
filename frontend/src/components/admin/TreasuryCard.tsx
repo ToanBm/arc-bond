@@ -16,10 +16,10 @@ export default function TreasuryCard() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Withdrew {amount} USDC successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${hash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -41,24 +41,17 @@ export default function TreasuryCard() {
 
   return (
     <div className="card">
-      <h3 className="text-lg font-bold mb-4 text-gray-900">💰 Treasury Management</h3>
-      
+      <h3 className="text-lg font-bold mb-4 text-gray-900">Treasury Management</h3>
+
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className="bg-gray-50 border border-custom rounded-lg p-3">
-            <div className="text-sm text-gray-600 mb-1">Total Balance</div>
+            <div className="text-sm text-gray-600 mb-1">Total Balance (USDC)</div>
             <div className="text-lg font-bold text-gray-900">{treasuryBalance}</div>
-            <div className="text-sm text-gray-500">USDC</div>
-          </div>
-          <div className="bg-gray-50 border border-custom rounded-lg p-3">
-            <div className="text-sm text-gray-600 mb-1">Reserved (30%)</div>
-            <div className="text-lg font-bold text-gray-900">{reserved}</div>
-            <div className="text-sm text-gray-500">USDC</div>
           </div>
           <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-            <div className="text-sm text-gray-600 mb-1">Withdrawable</div>
+            <div className="text-sm text-gray-600 mb-1">Withdrawable (USDC)</div>
             <div className="text-lg font-bold text-green-700">{withdrawable}</div>
-            <div className="text-sm text-gray-500">USDC</div>
           </div>
         </div>
 

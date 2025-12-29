@@ -10,9 +10,9 @@ import { BondFactoryABI } from './BondFactoryABI';
 import { BondFactoryAddresses, getBondFactoryAddress } from './BondFactoryAddresses';
 import { PoolsAddresses, getPools, getPool, getAllPoolIds, type PoolInfo } from './PoolsAddresses';
 // BondSeriesAddresses not available (factory-only mode)
-const getBondSeriesAddress: ((chainId: number) => `0x${string}`) | null = null;
+let getBondSeriesAddress: ((chainId: number) => `0x${string}`) | null = null;
 // BondTokenAddresses not available (factory-only mode)
-const getBondTokenAddress: ((chainId: number) => `0x${string}`) | null = null;
+let getBondTokenAddress: ((chainId: number) => `0x${string}`) | null = null;
 
 // Export tất cả ABIs
 export const ABIs = {
@@ -41,11 +41,11 @@ export type { PoolInfo };
 export const ARC_TESTNET_CHAIN_ID = 5042002;
 
 // Safe helper functions for legacy mode (return null if not available)
-export function getBondSeriesAddressSafe(_chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
+export function getBondSeriesAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
   return null;
 }
 
-export function getBondTokenAddressSafe(_chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
+export function getBondTokenAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
   return null;
 }
 

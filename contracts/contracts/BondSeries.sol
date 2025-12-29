@@ -10,8 +10,8 @@ import "./BondToken.sol";
 
 /**
  * @title BondSeries
- * @notice Main contract for fixed-rate bond issuance with daily coupon payments
- * @dev Implements claim-based coupon distribution with 1e18 precision
+ * @notice Main contract for fixed-rate bond issuance with continuous interest accrual
+ * @dev Interest accrues continuously based on block.timestamp. No snapshot mechanism required.
  */
 contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
@@ -26,9 +26,19 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     uint256 public constant COUPON_PER_TOKEN_PER_DAY = 0.001e6; // 0.001 USDC in 6 decimals (match USDC)
     uint256 public constant RESERVE_RATIO = 30; // 30% reserve
     uint256 public constant DEFAULT_GRACE_PERIOD = 3 days;
-    uint256 public constant SNAPSHOT_INTERVAL = 1 days; // Daily
     uint256 public constant PRECISION = 1e6; // Match USDC decimals for zero precision loss
     uint256 public constant MAX_CAP = 10_000e6; // 10,000 USDC cap
+    
+    // Interest accrual: 0.001 USDC per token per day = 0.001e6 / 86400 per second
+    // COUPON_PER_TOKEN_PER_DAY = 0.001e6 = 1,000 (6 decimals, meaning 0.001 USDC)
+    // Index rate per second: 1,000 / 86,400 (but integer division = 0, loses precision)
+    // To avoid precision loss: INDEX_RATE_PER_SECOND = (COUPON_PER_TOKEN_PER_DAY * PRECISION) / 86400
+    // This stores: (1,000 * 1,000,000) / 86,400 = 11,574,074
+    // When calculating index: use INDEX_RATE_PER_SECOND directly (already has PRECISION scaling built-in)
+    // Index increases by: timeElapsed * INDEX_RATE_PER_SECOND / PRECISION
+    // But we need: 1,000 / 86,400 per second = 11,574.074 per second (with PRECISION scaling)
+    // So INDEX_RATE_PER_SECOND should be: (COUPON_PER_TOKEN_PER_DAY * PRECISION * PRECISION) / 86400
+    uint256 public constant INDEX_RATE_PER_SECOND = (COUPON_PER_TOKEN_PER_DAY * PRECISION * PRECISION) / 86400;
 
     // ==================== STATE VARIABLES ====================
     
@@ -36,34 +46,21 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     IERC20 public immutable usdc;
     
     uint256 public maturityDate;
-    uint256 public lastRecordTime;
-    uint256 public nextRecordTime;
-    uint256 public recordCount;
-    uint256 public cumulativeCouponIndex; // 1e18 precision
+    uint256 public lastDistributionIndex; // Index value at last distribution time (snapshot of continuously growing index)
+    uint256 public lastDistributionTime; // Timestamp when index was last set
     uint256 public totalDeposited; // Total USDC deposited
-    uint256 public lastDistributedRecord; // Last record ID that was distributed
     bool public emergencyRedeemEnabled;
     
     // ==================== MAPPINGS ====================
     
     mapping(address => uint256) public claimedIndex; // User's last claimed index
-    mapping(uint256 => Snapshot) public snapshots; // recordId => Snapshot
-    
-    // ==================== STRUCTS ====================
-    
-    struct Snapshot {
-        uint256 recordId;
-        uint256 timestamp;
-        uint256 totalSupply;
-        uint256 treasuryBalance;
-    }
+    mapping(address => uint256) public interestReceived; // Total USDC interest received by user
     
     // ==================== EVENTS ====================
     
     event Deposited(address indexed user, uint256 usdcAmount, uint256 bondAmount, uint256 timestamp);
-    event SnapshotRecorded(uint256 indexed recordId, uint256 totalSupply, uint256 treasuryBalance, uint256 timestamp);
-    event CouponDistributed(uint256 indexed recordId, uint256 amount, uint256 newIndex, uint256 timestamp);
-    event CouponClaimed(address indexed user, uint256 amount, uint256 timestamp);
+    event InterestDistributed(uint256 amount, uint256 newIndex, uint256 timestamp);
+    event InterestClaimed(address indexed user, uint256 amount, uint256 timestamp);
     event Redeemed(address indexed user, uint256 bondAmount, uint256 usdcAmount, uint256 timestamp);
     event EmergencyRedeemEnabled(uint256 timestamp);
     event OwnerWithdraw(address indexed owner, uint256 amount, uint256 timestamp);
@@ -74,12 +71,9 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     error InvalidAmount();
     error NotMatured();
     error PoolExpired();
-    error TooSoon();
-    error NoSnapshotAvailable();
     error InsufficientBalance();
     error ReserveViolation();
     error EmergencyNotEnabled();
-    error AlreadyDistributed();
     
     // ==================== CONSTRUCTOR ====================
     
@@ -88,28 +82,25 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
      * @param bondToken_ BondToken contract address
      * @param usdc_ USDC token address
      * @param keeper_ Keeper address (backend automation)
-     * @param maturityMinutes_ Number of minutes until maturity (use for testing)
+     * @param maturityHours_ Number of hours until maturity
      */
     constructor(
         address bondToken_,
         address usdc_,
         address keeper_,
-        uint256 maturityMinutes_
+        uint256 maturityHours_
     ) {
         bondToken = BondToken(bondToken_);
         usdc = IERC20(usdc_);
-        maturityDate = block.timestamp + (maturityMinutes_ * 1 minutes);
+        maturityDate = block.timestamp + (maturityHours_ * 1 hours);
         
         // Setup roles
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(KEEPER_ROLE, keeper_);
         
-        // Initialize snapshot timing
-        lastRecordTime = block.timestamp;
-        
-        // Align to next 00:00 UTC
-        // Example: if now is 10:00, (10:00 / 1 days) = 0. (0 + 1) * 1 days = 24:00 (Next Midnight)
-        nextRecordTime = ((block.timestamp / 1 days) + 1) * 1 days;
+        // Initialize distribution tracking
+        lastDistributionTime = block.timestamp;
+        lastDistributionIndex = 0;
     }
     
     // ==================== USER FUNCTIONS ====================
@@ -133,38 +124,40 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         totalDeposited += usdcAmount;
         
         // Mint BondToken to user
+        // _handleTransfer hook in BondToken will automatically:
+        // 1. Claim interest on existing balance (if any)
+        // 2. Update claimedIndex to current index
         bondToken.mint(msg.sender, bondAmount);
-        
-        // Initialize user's claimed index if first time
-        if (claimedIndex[msg.sender] == 0) {
-            claimedIndex[msg.sender] = cumulativeCouponIndex;
-        }
         
         emit Deposited(msg.sender, usdcAmount, bondAmount, block.timestamp);
     }
     
     /**
-     * @notice Claim accumulated coupon (interest)
+     * @notice Claim accumulated interest
      * @return claimed Amount of USDC claimed
      */
-    function claimCoupon() external nonReentrant returns (uint256 claimed) {
+    function claimInterest() external nonReentrant returns (uint256 claimed) {
         uint256 userBalance = bondToken.balanceOf(msg.sender);
         if (userBalance == 0) return 0;
         
+        // Get current index (calculated real-time based on time elapsed)
+        uint256 currentIndex = getCurrentIndex();
+        
         // Calculate unclaimed coupon
-        uint256 indexDelta = cumulativeCouponIndex - claimedIndex[msg.sender];
+        uint256 indexDelta = currentIndex - claimedIndex[msg.sender];
         // Both 6 decimals, no conversion needed
         claimed = (indexDelta * userBalance) / PRECISION;
         
         if (claimed == 0) return 0;
         
-        // Update user's claimed index
-        claimedIndex[msg.sender] = cumulativeCouponIndex;
+        // Update user's claimed index and total interest received
+        claimedIndex[msg.sender] = currentIndex;
+        interestReceived[msg.sender] += claimed;
         
         // Transfer USDC coupon to user
         usdc.safeTransfer(msg.sender, claimed);
         
-        emit CouponClaimed(msg.sender, claimed, block.timestamp);
+        emit InterestClaimed(msg.sender, claimed, block.timestamp);
     }
     
     /**
@@ -175,9 +168,10 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         if (block.timestamp < maturityDate) revert NotMatured();
         if (bondAmount == 0) revert InvalidAmount();
         
-        // Claim any pending coupon first
-        if (cumulativeCouponIndex > claimedIndex[msg.sender]) {
-            this.claimCoupon();
+        // Claim any pending interest first
+        uint256 currentIndex = getCurrentIndex();
+        if (currentIndex > claimedIndex[msg.sender]) {
+            this.claimInterest();
         }
         
         // Calculate USDC to return (1 BondToken = 0.1 USDC)
@@ -215,72 +209,40 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         emit Redeemed(msg.sender, bondAmount, usdcAmount, block.timestamp);
     }
     
-    // ==================== KEEPER FUNCTIONS ====================
-    
-    /**
-     * @notice Record snapshot (called by keeper automation)
-     * @dev Records snapshot every SNAPSHOT_INTERVAL (5 minutes for testing)
-     */
-    function recordSnapshot() external onlyRole(KEEPER_ROLE) {
-        if (block.timestamp < nextRecordTime) revert TooSoon();
-        if (block.timestamp >= maturityDate) revert PoolExpired();
-        
-        recordCount++;
-        
-        uint256 totalSupply = bondToken.totalSupply();
-        uint256 treasuryBalance = usdc.balanceOf(address(this));
-        
-        snapshots[recordCount] = Snapshot({
-            recordId: recordCount,
-            timestamp: block.timestamp,
-            totalSupply: totalSupply,
-            treasuryBalance: treasuryBalance
-        });
-        
-        lastRecordTime = block.timestamp;
-        nextRecordTime += SNAPSHOT_INTERVAL;
-        
-        emit SnapshotRecorded(recordCount, totalSupply, treasuryBalance, block.timestamp);
-        
-        // Check if default (>3 snapshots without distribution)
-        // Only check if we have more than 3 records
-        if (recordCount > 3 && lastDistributedRecord < recordCount - 3) {
-            emergencyRedeemEnabled = true;
-            emit EmergencyRedeemEnabled(block.timestamp);
-        }
-    }
-    
     // ==================== OWNER FUNCTIONS ====================
     
     /**
-     * @notice Distribute coupon for latest snapshot
-     * @param amount Amount of USDC to distribute (dynamic based on actual amount)
+     * @notice Owner deposits USDC to fund interest payments
+     * @param amount Amount of USDC to deposit
+     * @dev Index increases continuously. This function snapshots the current index.
      */
-    function distributeCoupon(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
-        if (recordCount == 0) revert NoSnapshotAvailable();
-        if (lastDistributedRecord >= recordCount) revert AlreadyDistributed();
+    function distributeInterest(uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) nonReentrant {
+        if (amount == 0) revert InvalidAmount();
         
-        Snapshot memory snapshot = snapshots[recordCount];
-        if (snapshot.totalSupply == 0) revert InvalidAmount();
-        
-        // Transfer USDC from owner
+        // Transfer USDC from owner to contract
         usdc.safeTransferFrom(msg.sender, address(this), amount);
         
-        // Update cumulative index (dynamic based on actual distributed amount)
-        // Formula: indexIncrement = (amount * PRECISION) / totalSupply
-        // Both 6 decimals, no conversion needed
-        uint256 indexIncrement = (amount * PRECISION) / snapshot.totalSupply;
-        cumulativeCouponIndex += indexIncrement;
+        // Check emergency mode BEFORE updating (check if previous period was overdue)
+        // After distribution, emergency mode is reset
+        if (block.timestamp - lastDistributionTime > DEFAULT_GRACE_PERIOD) {
+            // Was overdue, enable emergency mode (if not already enabled)
+            if (!emergencyRedeemEnabled) {
+                emergencyRedeemEnabled = true;
+                emit EmergencyRedeemEnabled(block.timestamp);
+            }
+        }
         
-        // Update last distributed record
-        lastDistributedRecord = recordCount;
+        // Snapshot the current continuously growing index
+        uint256 currentIndex = getCurrentIndex();
+        lastDistributionIndex = currentIndex;
+        lastDistributionTime = block.timestamp;
         
-        // Reset emergency mode if was enabled
+        // Reset emergency mode after distribution
         if (emergencyRedeemEnabled) {
             emergencyRedeemEnabled = false;
         }
         
-        emit CouponDistributed(recordCount, amount, cumulativeCouponIndex, block.timestamp);
+        emit InterestDistributed(amount, currentIndex, block.timestamp);
     }
     
     /**
@@ -316,7 +278,21 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
     // ==================== VIEW FUNCTIONS ====================
     
     /**
-     * @notice Calculate claimable coupon for a user
+     * @notice Get current index (calculated real-time based on time elapsed)
+     * @return Current cumulative interest index
+     */
+    function getCurrentIndex() public view returns (uint256) {
+        uint256 timeElapsed = block.timestamp - lastDistributionTime;
+        // INDEX_RATE_PER_SECOND = (COUPON_PER_TOKEN_PER_DAY * PRECISION * PRECISION) / 86400
+        // = (1,000 * 1,000,000 * 1,000,000) / 86,400 = 11,574,074,074,074
+        // Index increase: (timeElapsed * INDEX_RATE_PER_SECOND) / (PRECISION * PRECISION)
+        // Example: 1 second * 11,574,074,074,074 / (1,000,000 * 1,000,000) = 11,574.074 (6 decimals)
+        // This equals 0.011574074 USDC per token per second = 1,000 per day (0.001 USDC/token/day) ✓
+        return lastDistributionIndex + (timeElapsed * INDEX_RATE_PER_SECOND) / (PRECISION * PRECISION);
+    }
+    
+    /**
+     * @notice Calculate claimable interest for a user
      * @param user User address
      * @return Claimable USDC amount
      */
@@ -324,7 +300,8 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         uint256 userBalance = bondToken.balanceOf(user);
         if (userBalance == 0) return 0;
         
-        uint256 indexDelta = cumulativeCouponIndex - claimedIndex[user];
+        uint256 currentIndex = getCurrentIndex();
+        uint256 indexDelta = currentIndex - claimedIndex[user];
         // Both 6 decimals, no conversion needed
         return (indexDelta * userBalance) / PRECISION;
     }
@@ -352,69 +329,88 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         uint256 _maturityDate,
         uint256 _totalDeposited,
         uint256 _totalSupply,
-        uint256 _recordCount,
-        uint256 _cumulativeCouponIndex,
+        uint256 _currentIndex,
+        uint256 _lastDistributionTime,
         bool _emergencyMode
     ) {
         return (
             maturityDate,
             totalDeposited,
             bondToken.totalSupply(),
-            recordCount,
-            cumulativeCouponIndex,
+            getCurrentIndex(),
+            lastDistributionTime,
             emergencyRedeemEnabled
         );
     }
     
     /**
-     * @notice Check if an address can record snapshot
-     * @param keeper Address to check
-     * @return canRecord True if address has KEEPER_ROLE and timing is valid
-     * @return reason Reason if cannot record (empty if can record)
+     * @notice Check and update emergency mode if needed (time-based)
+     * @dev Can be called by anyone to check/update emergency status
      */
-    function canRecordSnapshot(address keeper) external view returns (bool canRecord, string memory reason) {
-        if (!hasRole(KEEPER_ROLE, keeper)) {
-            return (false, "Address does not have KEEPER_ROLE");
+    function checkEmergencyMode() external {
+        if (block.timestamp - lastDistributionTime > DEFAULT_GRACE_PERIOD) {
+            emergencyRedeemEnabled = true;
+            emit EmergencyRedeemEnabled(block.timestamp);
         }
-        if (block.timestamp < nextRecordTime) {
-            return (false, "Too soon to record snapshot");
-        }
-        if (block.timestamp >= maturityDate) {
-            return (false, "Pool has expired");
-        }
-        return (true, "");
     }
     
     /**
-     * @notice Get snapshot status information
-     * @return canRecordNow True if snapshot can be recorded now
-     * @return hasKeeperRole True if caller has KEEPER_ROLE
-     * @return timeUntilNext Seconds until next snapshot can be recorded (0 if can record now)
-     * @return isPoolExpired True if pool has expired
-     * @return nextRecordTimestamp Timestamp when next snapshot can be recorded
+     * @notice Handle transfer hook from BondToken
+     * @dev Called by BondToken BEFORE balance update in _update() to claim interest and update claimedIndex for both from and to
+     * This prevents transfer exploit where receiver could claim interest from before they received tokens
+     * IMPORTANT: This is called before super._update() in BondToken, so balances are still old values
+     * Reentrancy protection: Balances are updated AFTER this call (CEI pattern), so reentrancy is safe
+     * @param from Address sending tokens
+     * @param to Address receiving tokens
+     * @notice Gas cost: Adds ~30k-50k gas per transfer due to USDC transfers. Acceptable on L2s, expensive on L1.
      */
-    function getSnapshotStatus(address keeper) external view returns (
-        bool canRecordNow,
-        bool hasKeeperRole,
-        uint256 timeUntilNext,
-        bool isPoolExpired,
-        uint256 nextRecordTimestamp
-    ) {
-        hasKeeperRole = hasRole(KEEPER_ROLE, keeper);
-        isPoolExpired = block.timestamp >= maturityDate;
-        nextRecordTimestamp = nextRecordTime;
+    function _handleTransfer(address from, address to, uint256 /* amount */) external {
+        // Only BondToken contract can call this
+        require(msg.sender == address(bondToken), "BondSeries: only BondToken can call");
         
-        if (block.timestamp >= nextRecordTime && !isPoolExpired) {
-            timeUntilNext = 0;
-            canRecordNow = hasKeeperRole;
-        } else {
-            if (nextRecordTime > block.timestamp) {
-                timeUntilNext = nextRecordTime - block.timestamp;
-            } else {
-                timeUntilNext = 0;
-            }
-            canRecordNow = false;
+        uint256 currentIndex = getCurrentIndex();
+        
+        // SENDER: If this is a transfer or burn (from != 0), update their rewards
+        if (from != address(0)) {
+            _updateUserRewards(from, currentIndex);
         }
+        
+        // RECEIVER: If this is a transfer or mint (to != 0)
+        if (to != address(0)) {
+            // New user (claimedIndex = 0): Just initialize their index
+            if (claimedIndex[to] == 0) {
+                claimedIndex[to] = currentIndex;
+            } else {
+                // Existing user: Update rewards on their existing balance before receiving new tokens
+                _updateUserRewards(to, currentIndex);
+            }
+        }
+    }
+    
+    /**
+     * @notice Update user rewards and claimed index (internal helper)
+     * @dev Claims accumulated interest and updates claimedIndex to current index
+     * @param user User address
+     * @param currentIndex Current cumulative interest index
+     */
+    function _updateUserRewards(address user, uint256 currentIndex) internal {
+        uint256 balance = bondToken.balanceOf(user);
+        if (balance > 0 && claimedIndex[user] > 0) {
+            uint256 indexDelta = currentIndex > claimedIndex[user] ? currentIndex - claimedIndex[user] : 0;
+            if (indexDelta > 0) {
+                uint256 reward = (indexDelta * balance) / PRECISION;
+                uint256 available = usdc.balanceOf(address(this));
+                
+                // Only transfer if we have enough balance (defensive check)
+                if (reward > 0 && reward <= available) {
+                    interestReceived[user] += reward;
+                    usdc.safeTransfer(user, reward);
+                    emit InterestClaimed(user, reward, block.timestamp);
+                }
+            }
+        }
+        // Always update claimedIndex to current index
+        claimedIndex[user] = currentIndex;
     }
 }
 

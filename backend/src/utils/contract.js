@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
-import { 
-  RPC_URL, 
-  KEEPER_PRIVATE_KEY, 
+import {
+  RPC_URL,
+  KEEPER_PRIVATE_KEY,
   BOND_SERIES_ADDRESS,
   BOND_FACTORY_ADDRESS,
   USE_FACTORY,
@@ -17,13 +17,13 @@ export function getBondSeriesContract(bondSeriesAddress = null) {
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const keeper = new ethers.Wallet(KEEPER_PRIVATE_KEY, provider);
   const address = bondSeriesAddress || BOND_SERIES_ADDRESS;
-  
+
   if (!address) {
     throw new Error('BondSeries address not provided and BOND_SERIES_ADDRESS not set');
   }
-  
+
   const contract = new ethers.Contract(address, BOND_SERIES_ABI, keeper);
-  
+
   return { contract, keeper, provider };
 }
 
@@ -34,11 +34,11 @@ export function getBondFactoryContract() {
   if (!USE_FACTORY || !BOND_FACTORY_ADDRESS) {
     throw new Error('Factory mode not enabled or BOND_FACTORY_ADDRESS not set');
   }
-  
+
   const provider = new ethers.JsonRpcProvider(RPC_URL);
   const keeper = new ethers.Wallet(KEEPER_PRIVATE_KEY, provider);
   const contract = new ethers.Contract(BOND_FACTORY_ADDRESS, BOND_FACTORY_ABI, keeper);
-  
+
   return { contract, keeper, provider };
 }
 
@@ -61,7 +61,7 @@ export async function getAllPoolsToMonitor() {
       isActive: true
     }];
   }
-  
+
   // Factory mode
   let contract;
   try {
@@ -70,7 +70,7 @@ export async function getAllPoolsToMonitor() {
   } catch (error) {
     throw new Error(`Failed to connect to Factory: ${error.message}. Check BOND_FACTORY_ADDRESS in .env`);
   }
-  
+
   // Get all pools
   let poolCount;
   try {
@@ -82,10 +82,10 @@ export async function getAllPoolsToMonitor() {
     }
     throw error;
   }
-  
+
   // If POOL_IDS specified, use those; otherwise get all active pools
   let poolIdsToMonitor = [];
-  
+
   if (POOL_IDS && POOL_IDS.length > 0) {
     // Use specified pool IDs, but validate them
     poolIdsToMonitor = POOL_IDS.map(id => Number(id)).filter(id => {
@@ -101,11 +101,11 @@ export async function getAllPoolsToMonitor() {
     try {
       const activePools = await contract.getActivePools();
       console.log(`   [DEBUG] getActivePools() returned ${activePools.length} items`);
-      
+
       // Check if first item is bigint (poolId) or PoolInfo struct
       const firstItem = activePools[0];
       const isPoolIdArray = typeof firstItem === 'bigint' || (typeof firstItem === 'object' && firstItem?.constructor?.name === 'BigNumber');
-      
+
       if (isPoolIdArray) {
         // getActivePools() returned poolIds array (unexpected but handle it)
         console.log('   [DEBUG] getActivePools() returned poolIds array, converting...');
@@ -129,11 +129,11 @@ export async function getAllPoolsToMonitor() {
           } else {
             return null;
           }
-          
+
           if (!poolId || isNaN(poolId)) {
             return null;
           }
-          
+
           return poolId;
         }).filter(id => {
           // Filter out null/NaN values
@@ -147,7 +147,7 @@ export async function getAllPoolsToMonitor() {
           return true;
         });
       }
-      
+
       console.log(`   Found ${poolIdsToMonitor.length} valid active pools via getActivePools()`);
       if (poolIdsToMonitor.length > 0) {
         console.log(`   Pool IDs: ${poolIdsToMonitor.join(', ')}`);
@@ -156,7 +156,7 @@ export async function getAllPoolsToMonitor() {
       console.log('   getActivePools() failed, iterating through all pools...');
       console.log('   Error:', error.message);
     }
-    
+
     // Fallback: if getActivePools failed or returned invalid pools, iterate through all pools
     if (poolIdsToMonitor.length === 0 && poolCount > 0) {
       console.log(`   Fallback: Checking all pools from 1 to ${poolCount}...`);
@@ -165,12 +165,12 @@ export async function getAllPoolsToMonitor() {
       }
     }
   }
-  
+
   if (poolIdsToMonitor.length === 0) {
     console.log('   ⚠️  No valid pools to monitor');
     return [];
   }
-  
+
   // Fetch pool info
   const pools = [];
   for (const poolId of poolIdsToMonitor) {
@@ -185,7 +185,7 @@ export async function getAllPoolsToMonitor() {
         poolInfo = await contract.getPool(poolId);
         console.log(`   [DEBUG] Pool ${poolId} via getPool() - Type: ${Array.isArray(poolInfo) ? 'Array' : typeof poolInfo}`);
       }
-      
+
       // Handle both array and object return formats
       let pool;
       if (Array.isArray(poolInfo)) {
@@ -213,14 +213,14 @@ export async function getAllPoolsToMonitor() {
           isActive: poolInfo.isActive ?? true
         };
       }
-      
+
       // Debug: log decoded pool info
       console.log(`   [DEBUG] Pool ${poolId} decoded:`);
       console.log(`     - Type: ${Array.isArray(poolInfo) ? 'Array' : 'Object'}`);
       console.log(`     - bondSeries: ${pool.bondSeries || 'MISSING/UNDEFINED'}`);
       console.log(`     - bondToken: ${pool.bondToken || 'MISSING/UNDEFINED'}`);
       console.log(`     - name: ${pool.name || 'MISSING'}`);
-      
+
       // Validate bondSeries address before adding to list
       const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
       if (!pool.bondSeries || pool.bondSeries === ZERO_ADDRESS || pool.bondSeries === null || pool.bondSeries === undefined) {
@@ -229,7 +229,7 @@ export async function getAllPoolsToMonitor() {
         console.log(`   [DEBUG] poolInfo keys (if object):`, poolInfo && typeof poolInfo === 'object' && !Array.isArray(poolInfo) ? Object.keys(poolInfo) : 'N/A');
         throw new Error(`Pool ${poolId} has invalid bondSeries address: ${pool.bondSeries}`);
       }
-      
+
       // Only add active pools (or if using POOL_IDS, respect user's choice)
       if (POOL_IDS && POOL_IDS.length > 0) {
         // User specified pools - add even if inactive (they might want to monitor inactive pools)
@@ -259,9 +259,9 @@ export async function getAllPoolsToMonitor() {
       }
     }
   }
-  
+
   console.log(`   Monitoring ${pools.length} pool(s)`);
-  
+
   return pools;
 }
 
@@ -272,7 +272,7 @@ export async function getKeeperBalance(bondSeriesAddress) {
   // In Factory mode, we need a bondSeriesAddress to get keeper
   // If not provided, try to get from first pool or use BOND_SERIES_ADDRESS
   let addressToUse = bondSeriesAddress;
-  
+
   if (!addressToUse && USE_FACTORY) {
     // Try to get from first pool
     try {
@@ -285,11 +285,11 @@ export async function getKeeperBalance(bondSeriesAddress) {
       addressToUse = BOND_SERIES_ADDRESS;
     }
   }
-  
+
   if (!addressToUse) {
     addressToUse = BOND_SERIES_ADDRESS;
   }
-  
+
   const { keeper, provider } = getBondSeriesContract(addressToUse);
   const balance = await provider.getBalance(keeper.address);
   return balance;
@@ -311,7 +311,7 @@ export function getTimeLeft(nextRecordTime) {
   const now = Math.floor(Date.now() / 1000);
   const timeLeft = Number(nextRecordTime) - now;
   const BUFFER_SECONDS = 2; // Buffer to account for transaction processing time
-  
+
   return {
     seconds: timeLeft,
     hours: timeLeft / 3600,

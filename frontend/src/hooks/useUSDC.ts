@@ -30,16 +30,18 @@ export function useUSDCBalance(address?: `0x${string}`) {
   });
 }
 
-// Get allowance (how much BondSeries can spend)
-export function useUSDCAllowance(ownerAddress?: `0x${string}`) {
-  const bondSeriesAddress = useBondSeriesAddressForAllowance();
+// Get allowance (how much a spender can spend)
+export function useUSDCAllowance(ownerAddress?: `0x${string}`, spenderAddress?: `0x${string}`) {
+  const bondSeriesAddressFromContext = useBondSeriesAddressForAllowance();
+  const spender = spenderAddress || bondSeriesAddressFromContext;
+
   return useReadContract({
     address: USDC_ADDRESS,
     abi: ABIs.USDC,
     functionName: 'allowance',
-    args: ownerAddress && bondSeriesAddress ? [ownerAddress, bondSeriesAddress] : undefined,
-    query: { 
-      enabled: !!ownerAddress && !!bondSeriesAddress,
+    args: ownerAddress && spender ? [ownerAddress, spender] : undefined,
+    query: {
+      enabled: !!ownerAddress && !!spender,
       refetchInterval: 30000, // Refetch every 30s as backup
     },
   });
@@ -128,3 +130,33 @@ export function useApproveUSDCMax() {
   };
 }
 
+// Approve USDC for any spender (for Market contract)
+export function useApproveUSDCForMarket() {
+  const queryClient = useQueryClient();
+  const { data: hash, writeContract, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  useEffect(() => {
+    if (isSuccess && hash) {
+      queryClient.invalidateQueries({ queryKey: ['readContract'] });
+    }
+  }, [isSuccess, hash, queryClient]);
+
+  const approve = (spender: `0x${string}`, amount: bigint) => {
+    writeContract({
+      address: USDC_ADDRESS,
+      abi: ABIs.USDC,
+      functionName: 'approve',
+      args: [spender, amount],
+    });
+  };
+
+  return {
+    approve,
+    hash,
+    isPending,
+    isConfirming,
+    isSuccess,
+    error,
+  };
+}

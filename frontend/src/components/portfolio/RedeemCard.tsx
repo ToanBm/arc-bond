@@ -13,10 +13,10 @@ export default function RedeemCard() {
   const { hasMatured, timeToMaturity } = useDashboardData();
   const { selectedPool } = usePool();
   const { maturePools, isLoading: loadingMaturePools } = useMaturePools();
-  
+
   // Selected pool for redeem (from dropdown)
   const [selectedRedeemPoolId, setSelectedRedeemPoolId] = useState<string | null>(null);
-  
+
   // Get selected redeem pool info
   const selectedRedeemPool = useMemo(() => {
     if (selectedRedeemPoolId) {
@@ -40,7 +40,7 @@ export default function RedeemCard() {
     // Or first mature pool
     return maturePools.length > 0 ? maturePools[0] : null;
   }, [selectedRedeemPoolId, maturePools, hasMatured, selectedPool, abondBalance, abondBalanceRaw, redeemableAmount]);
-  
+
   // Update selected pool when mature pools change
   useEffect(() => {
     if (maturePools.length > 0 && !selectedRedeemPoolId) {
@@ -48,7 +48,7 @@ export default function RedeemCard() {
       setSelectedRedeemPoolId(maturePools[0].poolId);
     }
   }, [maturePools, selectedRedeemPoolId]);
-  
+
   const { redeem, isPending, isSuccess, hash } = useRedeem(selectedRedeemPool?.bondSeries);
 
   // Show success toast
@@ -57,10 +57,10 @@ export default function RedeemCard() {
       toast.success(
         <div className="flex flex-col gap-1">
           <div>✅ Redeemed {selectedRedeemPool.redeemableAmount} USDC from {selectedRedeemPool.name} successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${hash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <a
+            href={`https://testnet.arcscan.app/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -78,7 +78,7 @@ export default function RedeemCard() {
   };
 
   const canRedeem = isConnected && selectedRedeemPool && parseFloat(selectedRedeemPool.balance) > 0;
-  
+
   // Check if current pool is mature (for display)
   const showCurrentPoolInfo = hasMatured && selectedPool && parseFloat(abondBalance) > 0;
 
@@ -116,33 +116,34 @@ export default function RedeemCard() {
           </div>
         )}
       </div>
-      
+
       <div className="space-y-4">
         {/* Dropdown and Redeemable side by side */}
         {maturePools.length > 0 ? (
           <>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Select Pool
-            </label>
             <div className="flex gap-4 items-stretch">
               {/* Select Pool - Left (50%) */}
-              <select
-                value={selectedRedeemPoolId || maturePools[0]?.poolId || ""}
-                onChange={(e) => setSelectedRedeemPoolId(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px]"
-              >
-                {maturePools.map((pool) => (
-                  <option key={pool.poolId} value={pool.poolId}>
-                    {pool.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex-1">
+                <div className="text-sm text-gray-600 mb-1">Select Pool</div>
+                <select
+                  value={selectedRedeemPoolId || maturePools[0]?.poolId || ""}
+                  onChange={(e) => setSelectedRedeemPoolId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-[42px] bg-white"
+                >
+                  {maturePools.map((pool) => (
+                    <option key={pool.poolId} value={pool.poolId}>
+                      {pool.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               {/* Redeemable - Right (50%) */}
               {selectedRedeemPool && (
-                <div className="flex-1 bg-gray-50 border border-custom rounded-lg px-3 py-2 text-center flex items-center justify-center h-[42px]">
-                  <div className="text-sm text-gray-600">
-                    Redeemable: <span className="font-semibold">{selectedRedeemPool.redeemableAmount} USDC</span>
+                <div className="flex-1">
+                  <div className="text-sm text-gray-600 mb-1">Redeemable Amount</div>
+                  <div className="bg-gray-50 border border-custom rounded-lg px-3 py-2 text-center flex items-center justify-center h-[42px]">
+                    <span className="font-bold text-gray-900">{selectedRedeemPool.redeemableAmount} USDC</span>
                   </div>
                 </div>
               )}
@@ -162,10 +163,10 @@ export default function RedeemCard() {
           disabled={!canRedeem || isPending}
           className="w-full btn-primary font-medium py-2 px-4 disabled:opacity-50"
         >
-          {!isConnected 
+          {!isConnected
             ? "Connect wallet to redeem"
-            : isPending 
-              ? "Redeeming..." 
+            : isPending
+              ? "Redeeming..."
               : "Redeem All"}
         </button>
       </div>
