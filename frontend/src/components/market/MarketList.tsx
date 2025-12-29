@@ -16,8 +16,8 @@ export default function MarketList() {
     const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
     const hasCalledMatchOrder = useRef(false);
     const { address } = useAccount();
-    const { matchOrder, isPending, isConfirming, isSuccess } = useMatchOrder();
-    const { approve, isPending: isApproving, isSuccess: isApproved } = useApproveUSDCForMarket();
+    const { matchOrder, isSuccess } = useMatchOrder();
+    const { approve, isSuccess: isApproved } = useApproveUSDCForMarket();
     const { data: usdcAllowance } = useUSDCAllowance(address, MARKET_ADDRESS);
 
     useEffect(() => {
@@ -68,9 +68,9 @@ export default function MarketList() {
 
             toast.loading("Processing purchase...");
             matchOrder(orderData, order.signature as `0x${string}`);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.dismiss();
-            toast.error(error.message || "Failed to buy");
+            toast.error(error instanceof Error ? error.message : "Failed to buy");
             setProcessingOrderId(null);
         }
     };
@@ -92,7 +92,7 @@ export default function MarketList() {
         };
 
         matchOrder(orderData, pendingOrder.signature as `0x${string}`);
-    }, [isApproved, pendingOrder]);
+    }, [isApproved, pendingOrder, matchOrder]);
 
     return (
         <div>

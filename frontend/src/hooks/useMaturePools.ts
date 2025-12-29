@@ -48,8 +48,8 @@ export function useMaturePools() {
   const allPoolsWithLegacy = useMemo(() => {
     const pools = [...poolsArray];
     if (chainId === ARC_TESTNET_CHAIN_ID) {
-      const bondSeries = getBondSeriesAddressSafe(chainId);
-      const bondToken = getBondTokenAddressSafe(chainId);
+      const bondSeries = getBondSeriesAddressSafe();
+      const bondToken = getBondTokenAddressSafe();
       if (bondSeries && bondToken) {
         pools.unshift({
           poolId: "legacy",

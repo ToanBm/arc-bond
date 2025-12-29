@@ -1,6 +1,6 @@
 "use client";
 
-import { useTab } from "@/contexts/TabContext";
+import { useTab, type TabType } from "@/contexts/TabContext";
 import { useIsAdmin } from "@/hooks";
 import { useAccount } from "wagmi";
 
@@ -21,7 +21,7 @@ export const TabNavigation = () => {
       {tabs.map((tab) => (
         <button
           key={tab.id}
-          onClick={() => setActiveTab(tab.id as any)}
+          onClick={() => setActiveTab(tab.id as TabType)}
           className={`font-medium h-9 px-4 transition-colors min-w-[120px] text-base rounded-md ${activeTab === tab.id
             ? "btn-primary text-white"
             : "text-gray-900 hover:bg-gray-100"

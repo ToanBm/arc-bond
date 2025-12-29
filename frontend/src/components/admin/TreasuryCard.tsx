@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 
 export default function TreasuryCard() {
   const [amount, setAmount] = useState("");
-  const { treasuryBalance, reserved, withdrawable } = useAdminData();
+  const { treasuryBalance, withdrawable } = useAdminData();
   const { ownerWithdraw, isPending, isSuccess, hash } = useOwnerWithdraw();
 
   // Show success toast

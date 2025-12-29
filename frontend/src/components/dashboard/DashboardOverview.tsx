@@ -9,8 +9,8 @@ export default function DashboardOverview() {
     totalDeposited,
     timeToMaturity,
     isLoading,
-    pendingDistributions,
-    emergencyMode
+    healthStatus,
+    daysSinceLast
   } = useDashboardData();
 
   const { data: treasuryStatus } = useTreasuryStatus();
@@ -28,24 +28,23 @@ export default function DashboardOverview() {
 
   // --- Health Status Logic ---
   const getStatusColor = () => {
-    if (emergencyMode) return "text-red-600 bg-red-50 border-red-200";
-    if (pendingDistributions >= 3) return "text-orange-600 bg-orange-50 border-orange-200";
-    if (pendingDistributions >= 1) return "text-yellow-600 bg-yellow-50 border-yellow-200";
+    if (healthStatus === "emergency") return "text-red-600 bg-red-50 border-red-200";
+    if (healthStatus === "critical") return "text-orange-600 bg-orange-50 border-orange-200";
+    if (healthStatus === "warning") return "text-yellow-600 bg-yellow-50 border-yellow-200";
     return "text-green-600 bg-green-50 border-green-200";
   };
 
   const getStatusIcon = () => {
-    if (emergencyMode) return "🚨";
-    if (pendingDistributions >= 3) return "⚠️";
-    if (pendingDistributions >= 1) return "⚠️";
+    if (healthStatus === "emergency") return "🚨";
+    if (healthStatus === "critical" || healthStatus === "warning") return "⚠️";
     return "✅";
   };
 
   const getStatusText = () => {
-    if (emergencyMode) return "EMERGENCY MODE: Owner defaulted!";
-    if (pendingDistributions >= 3) return "CRITICAL: 3+ snapshots without distribution";
-    if (pendingDistributions >= 1) return "WARNING: Pending distribution";
-    return "System Healthy"; // Shortened for cleaner UI
+    if (healthStatus === "emergency") return "EMERGENCY MODE: Owner defaulted!";
+    if (healthStatus === "critical") return `CRITICAL: Overdue for ${daysSinceLast} days`;
+    if (healthStatus === "warning") return `WARNING: Last distributed ${daysSinceLast} day(s) ago`;
+    return "System Healthy";
   };
 
   if (isLoading) {

@@ -9,10 +9,8 @@
 export {
   // Read
   useBondSeriesInfo,
-  useNextRecordTime,
-  useRecordCount,
-  useLastDistributedRecord,
   useClaimableAmount,
+  useInterestReceived,
   useTreasuryStatus,
   useIsPaused,
   useEmergencyRedeemEnabled,
@@ -20,12 +18,11 @@ export {
 
   // Write (User)
   useDeposit,
-  useClaimCoupon,
+  useClaimInterest,
   useRedeem,
 
   // Write (Admin)
-  useRecordSnapshot,
-  useDistributeCoupon,
+  useDistributeInterest,
   useOwnerWithdraw,
   usePause,
   useUnpause,

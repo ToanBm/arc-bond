@@ -3,13 +3,11 @@
 import { useState, useEffect } from "react";
 import { useDistributeInterest } from "@/hooks/useBondSeries";
 import { useApproveUSDC } from "@/hooks/useUSDC";
-import { usePool } from "@/contexts/PoolContext";
 import { useAdminData } from "@/hooks";
 import toast from "react-hot-toast";
 
 export default function DistributeCard() {
   const [amount, setAmount] = useState("");
-  const { selectedPool } = usePool();
 
   const { approve, isPending: isApproving, isSuccess: approveSuccess } = useApproveUSDC();
   const { distributeInterest, isPending: isDistributing, isSuccess: distributeSuccess, hash } = useDistributeInterest();

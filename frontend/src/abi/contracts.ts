@@ -10,10 +10,6 @@ import { BondFactoryABI } from './BondFactoryABI';
 import { BondFactoryAddresses, getBondFactoryAddress } from './BondFactoryAddresses';
 import { PoolsAddresses, getPools, getPool, getAllPoolIds, type PoolInfo } from './PoolsAddresses';
 // BondSeriesAddresses not available (factory-only mode)
-let getBondSeriesAddress: ((chainId: number) => `0x${string}`) | null = null;
-// BondTokenAddresses not available (factory-only mode)
-let getBondTokenAddress: ((chainId: number) => `0x${string}`) | null = null;
-
 // Export tất cả ABIs
 export const ABIs = {
   BondSeries: BondSeriesABI.abi,
@@ -41,11 +37,11 @@ export type { PoolInfo };
 export const ARC_TESTNET_CHAIN_ID = 5042002;
 
 // Safe helper functions for legacy mode (return null if not available)
-export function getBondSeriesAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
+export function getBondSeriesAddressSafe(): `0x${string}` | null {
   return null;
 }
 
-export function getBondTokenAddressSafe(chainId: number = ARC_TESTNET_CHAIN_ID): `0x${string}` | null {
+export function getBondTokenAddressSafe(): `0x${string}` | null {
   return null;
 }
 
@@ -54,7 +50,7 @@ export function getContractAddresses(chainId: number = ARC_TESTNET_CHAIN_ID) {
   return {
     usdc: getUSDCAddress(chainId),
     bondFactory: getBondFactoryAddress(chainId),
-    bondSeries: getBondSeriesAddressSafe(chainId),
-    bondToken: getBondTokenAddressSafe(chainId),
+    bondSeries: getBondSeriesAddressSafe(),
+    bondToken: getBondTokenAddressSafe(),
   };
 }

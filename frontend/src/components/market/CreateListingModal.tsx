@@ -18,11 +18,11 @@ type CreateListingModalProps = {
 
 export default function CreateListingModal({ isOpen, onClose, bondTokenAddress }: CreateListingModalProps) {
     const { address } = useAccount();
-    const { signOrder, isPending: isSigning } = useSignOrder();
+    const { signOrder } = useSignOrder();
     const { data: bondBalance } = useBondTokenBalance(address, bondTokenAddress);
     const { data: bondSymbol } = useBondTokenSymbol(bondTokenAddress);
     const { data: bondDecimals } = useBondTokenDecimals(bondTokenAddress);
-    const { approve, isPending: isApproving, isConfirming: isApprovingConfirming, isSuccess: isApproved } = useApproveBondToken(bondTokenAddress);
+    const { approve, isSuccess: isApproved } = useApproveBondToken(bondTokenAddress);
 
     const tokenSymbol = bondSymbol || "arcUSDC";
     const decimals = bondDecimals || 6;
@@ -44,9 +44,9 @@ export default function CreateListingModal({ isOpen, onClose, bondTokenAddress }
             setStep("approving");
             toast.loading("Approving bond tokens...");
             approve(MARKET_ADDRESS, bondAmountWei);
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast.dismiss();
-            toast.error(error.message || "Failed");
+            toast.error(error instanceof Error ? error.message : "Failed");
             setStep("input");
         }
     };
@@ -98,15 +98,15 @@ export default function CreateListingModal({ isOpen, onClose, bondTokenAddress }
                 toast.success("Listing created successfully!");
                 setStep("input");
                 onClose();
-            } catch (error: any) {
+            } catch (error: unknown) {
                 toast.dismiss();
-                toast.error(error.message || "Failed to create listing");
+                toast.error(error instanceof Error ? error.message : "Failed to create listing");
                 setStep("input");
             }
         };
 
         signAndSubmit();
-    }, [isApproved, step]);
+    }, [isApproved, step, address, bondAmount, bondTokenAddress, deadline, decimals, onClose, signOrder, usdcPrice]);
 
     if (!isOpen) return null;
 

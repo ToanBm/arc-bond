@@ -68,7 +68,6 @@ export default function RedeemCard() {
         </div>
       );
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuccess, hash, selectedRedeemPool]);
 
   const handleRedeem = () => {

@@ -10,7 +10,7 @@ export default function MyListings() {
     const { address } = useAccount();
     const [myOrders, setMyOrders] = useState<SignedOrder[]>([]);
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
-    const { cancelOrder, isPending: isCancelling, isSuccess } = useCancelOrder();
+    const { cancelOrder, isSuccess } = useCancelOrder();
 
     // Fetch user's orders
     useEffect(() => {
@@ -25,21 +25,21 @@ export default function MyListings() {
     useEffect(() => {
         if (isSuccess && address && cancellingOrderId) {
             toast.success("Listing cancelled!");
-            
+
             // Find the cancelled order before removing it
             setMyOrders(prev => {
                 const cancelledOrder = prev.find(order => order.nonce === cancellingOrderId);
-                
+
                 // Delete from API (if order exists there)
                 if (cancelledOrder?.signature) {
                     fetch(`/api/orders?signature=${cancelledOrder.signature}`, { method: "DELETE" })
                         .catch((err) => console.error("Failed to delete order from API:", err));
                 }
-                
+
                 // Remove cancelled order from state immediately (optimistic update)
                 return prev.filter(order => order.nonce !== cancellingOrderId);
             });
-            
+
             // Refetch to ensure sync
             setTimeout(() => {
                 fetch(`/api/orders?seller=${address}`)
@@ -47,7 +47,7 @@ export default function MyListings() {
                     .then((data) => setMyOrders(data))
                     .catch((err) => console.error("Failed to refetch orders:", err));
             }, 500); // Small delay to ensure API DELETE completes
-            
+
             setCancellingOrderId(null);
         }
     }, [isSuccess, address, cancellingOrderId]);
@@ -57,8 +57,8 @@ export default function MyListings() {
             setCancellingOrderId(nonce);
             cancelOrder(BigInt(nonce));
             toast.loading("Cancelling listing...");
-        } catch (error: any) {
-            toast.error(error.message || "Failed to cancel");
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : "Failed to cancel");
             setCancellingOrderId(null);
         }
     };

@@ -1,8 +1,8 @@
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from "wagmi";
-import { useAccount } from "wagmi";
 import { BondMarketV2ABI } from "@/abi/BondMarketV2ABI";
 import { getBondMarketV2Address } from "@/abi/BondMarketV2Addresses";
 import { ARC_TESTNET_CHAIN_ID } from "@/abi/contracts";
+import type { OrderData } from "./useSignOrder";
 
 const MARKET_ADDRESS = getBondMarketV2Address(ARC_TESTNET_CHAIN_ID);
 
@@ -10,10 +10,10 @@ const MARKET_ADDRESS = getBondMarketV2Address(ARC_TESTNET_CHAIN_ID);
  * Hook to match (buy) an order
  */
 export function useMatchOrder() {
-    const { writeContract, data: hash, isPending, isSuccess, error } = useWriteContract();
+    const { writeContract, data: hash, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
-    const matchOrder = (order: any, signature: `0x${string}`) => {
+    const matchOrder = (order: OrderData, signature: `0x${string}`) => {
         writeContract({
             address: MARKET_ADDRESS,
             abi: BondMarketV2ABI.abi,
@@ -25,7 +25,6 @@ export function useMatchOrder() {
     return {
         matchOrder,
         hash,
-        isPending,
         isConfirming,
         isSuccess: isConfirmed,
         error,
@@ -36,7 +35,7 @@ export function useMatchOrder() {
  * Hook to cancel an order
  */
 export function useCancelOrder() {
-    const { writeContract, data: hash, isPending, isSuccess, error } = useWriteContract();
+    const { writeContract, data: hash, error } = useWriteContract();
     const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
 
     const cancelOrder = (nonce: bigint) => {
@@ -51,7 +50,6 @@ export function useCancelOrder() {
     return {
         cancelOrder,
         hash,
-        isPending,
         isConfirming,
         isSuccess: isConfirmed,
         error,
