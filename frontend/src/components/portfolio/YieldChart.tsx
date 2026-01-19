@@ -121,7 +121,7 @@ export default function YieldChart() {
                             labelStyle={{ color: '#64748b', marginBottom: '4px' }}
                         />
                         <Area
-                            type="stepAfter"
+                            type="monotone"
                             dataKey="tvl"
                             stroke="#6366f1"
                             strokeWidth={2}
