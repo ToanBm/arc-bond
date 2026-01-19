@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { usePortfolioData } from "@/hooks";
 import { useDeposit } from "@/hooks/useBondSeries";
 import { useApproveUSDC } from "@/hooks/useUSDC";
@@ -9,7 +10,7 @@ import toast from "react-hot-toast";
 export default function DepositCard() {
   const [amount, setAmount] = useState("");
   const { usdcBalance, hasAllowance, allowance, isConnected } = usePortfolioData();
-  
+
   const { approve, isPending: isApproving, isSuccess: approveSuccess } = useApproveUSDC();
   const { deposit, isPending: isDepositing, isSuccess: depositSuccess, hash } = useDeposit();
 
@@ -26,11 +27,14 @@ export default function DepositCard() {
     if (depositSuccess && hash) {
       toast.success(
         <div className="flex flex-col gap-1">
-          <div>✅ Deposited {amount} USDC successfully!</div>
-          <a 
-            href={`https://testnet.arcscan.app/tx/${hash}`} 
-            target="_blank" 
-            rel="noopener noreferrer" 
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-500">✓</span>
+            <span>Deposited {amount} USDC successfully!</span>
+          </div>
+          <a
+            href={`https://testnet.arcscan.app/tx/${hash}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-center text-base font-medium text-blue-600 hover:underline"
           >
             View on Explorer!
@@ -44,10 +48,10 @@ export default function DepositCard() {
 
   const handleDeposit = () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    
+
     const amountNum = parseFloat(amount);
     const allowanceNum = parseFloat(allowance);
-    
+
     // Check if need approval
     if (!hasAllowance || allowanceNum < amountNum) {
       toast.loading("Approving USDC...");
@@ -65,9 +69,9 @@ export default function DepositCard() {
     <div className="card">
       <h3 className="text-lg font-bold mb-4 text-gray-900 flex items-center justify-between">
         <span>Deposit</span>
-        <img src="/usdc.svg" alt="USDC" className="w-6 h-6" />
+        <Image src="/usdc.svg" alt="USDC" width={24} height={24} />
       </h3>
-      
+
       <div className="space-y-4">
         <div>
           <label className="text-sm text-gray-600 mb-2 block">Amount</label>
@@ -112,10 +116,10 @@ export default function DepositCard() {
           disabled={!canDeposit || isLoading}
           className="w-full btn-primary font-medium py-2 px-4 disabled:opacity-50"
         >
-          {!isConnected 
-            ? "Connect wallet to deposit" 
-            : isLoading 
-              ? (isApproving ? "Approving..." : "Depositing...") 
+          {!isConnected
+            ? "Connect wallet to deposit"
+            : isLoading
+              ? (isApproving ? "Approving..." : "Depositing...")
               : "Deposit"}
         </button>
       </div>

@@ -23,7 +23,6 @@ export default function DashboardOverview() {
     ? ((parseFloat(treasuryBalance) / parseFloat(totalDeposited)) * 100).toFixed(0)
     : "0";
 
-  // APY (Fixed for now)
   const apy = "365%";
 
   // --- Health Status Logic ---
@@ -34,65 +33,69 @@ export default function DashboardOverview() {
     return "text-green-600 bg-green-50 border-green-200";
   };
 
-  const getStatusIcon = () => {
-    if (healthStatus === "emergency") return "🚨";
-    if (healthStatus === "critical" || healthStatus === "warning") return "⚠️";
-    return "✅";
-  };
-
   const getStatusText = () => {
-    if (healthStatus === "emergency") return "EMERGENCY MODE: Owner defaulted!";
-    if (healthStatus === "critical") return `CRITICAL: Overdue for ${daysSinceLast} days`;
-    if (healthStatus === "warning") return `WARNING: Last distributed ${daysSinceLast} day(s) ago`;
-    return "System Healthy";
+    if (healthStatus === "emergency") return "EMERGENCY";
+    if (healthStatus === "critical") return `CRITICAL (${daysSinceLast}d overdue)`;
+    if (healthStatus === "warning") return `WARNING (${daysSinceLast}d overdue)`;
+    return "HEALTHY";
   };
 
   if (isLoading) {
     return (
-      <div className="card">
-        <div className="text-gray-500 text-center py-4">Loading stats...</div>
+      <div className="w-full bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center animate-pulse">
+        <div className="h-6 w-32 bg-gray-100 rounded"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header outside card */}
-      <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 px-1 min-h-[40px]">
-        <h3 className="text-xl font-bold text-gray-900">Market Status</h3>
+    <div className="bg-white border border-gray-200 shadow-sm rounded-xl">
+      <div className="px-6 h-16 flex items-center justify-between overflow-x-auto gap-8">
 
-        {/* Health Badge */}
-        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${getStatusColor()}`}>
-          <span>{getStatusIcon()}</span>
-          <span className="font-semibold text-sm">{getStatusText()}</span>
-        </div>
-      </div>
+        {/* Left: General Metrics */}
+        <div className="flex items-center gap-8 whitespace-nowrap">
+          <MetricTicker label="TVL" value={`$${totalDeposited}`} />
 
-      {/* Metrics Card */}
-      <div className="card">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          <MetricItem label="TVL" value={totalDeposited} unit="USDC" />
-          <MetricItem label="APY" value={apy} unit="" />
-          <MetricItem label="Solvency" value={`${solvencyRatio}%`} unit="" />
-          <MetricItem
-            label="Maturity"
-            value={timeToMaturity === 'Matured' ? 'Ended' : timeToMaturity}
-            unit=""
-            highlight={timeToMaturity === 'Matured'}
-          />
+          {/* Divider */}
+          <div className="h-8 w-px bg-gray-200"></div>
+
+          <MetricTicker label="APY" value={apy} highlight />
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-gray-200"></div>
+
+          {/* Solvency */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Solvency</span>
+            <span className={`text-sm font-bold ${Number(solvencyRatio) < 100 ? 'text-orange-500' : 'text-green-600'}`}>
+              {solvencyRatio}%
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="h-8 w-px bg-gray-200"></div>
+
+          <MetricTicker label="Maturity" value={timeToMaturity === 'Matured' ? 'Ended' : timeToMaturity} />
         </div>
+
+        {/* Right: System Health Badge */}
+        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold whitespace-nowrap ${getStatusColor()}`}>
+          <div className="w-2 h-2 rounded-full bg-current animate-pulse"></div>
+          <span>{getStatusText()}</span>
+        </div>
+
       </div>
     </div>
   );
 }
 
-function MetricItem({ label, value, unit, highlight }: { label: string; value: string; unit: string, highlight?: boolean }) {
+function MetricTicker({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="text-center">
-      <div className="text-sm text-gray-600 mb-2">{label}</div>
-      <div className={`text-lg font-bold ${highlight ? 'text-green-600' : 'text-gray-900'}`}>
-        {value} <span className="text-sm text-gray-500">{unit}</span>
-      </div>
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">{label}</span>
+      <span className={`text-sm font-bold ${highlight ? 'text-green-600' : 'text-gray-900'}`}>
+        {value}
+      </span>
     </div>
   );
 }

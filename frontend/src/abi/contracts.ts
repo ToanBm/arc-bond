@@ -10,6 +10,8 @@ import { BondFactoryABI } from './BondFactoryABI';
 import { BondFactoryAddresses, getBondFactoryAddress } from './BondFactoryAddresses';
 import { PoolsAddresses, getPools, getPool, getAllPoolIds, type PoolInfo } from './PoolsAddresses';
 // BondSeriesAddresses not available (factory-only mode)
+// BondTokenAddresses not available (factory-only mode)
+
 // Export tất cả ABIs
 export const ABIs = {
   BondSeries: BondSeriesABI.abi,

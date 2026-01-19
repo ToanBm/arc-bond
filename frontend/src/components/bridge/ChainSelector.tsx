@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import type { SupportedChain } from "@/hooks/useBridge";
 
 interface ChainSelectorProps {
@@ -29,7 +30,7 @@ export default function ChainSelector({ value, onChange, disabled }: ChainSelect
         disabled={disabled}
         className="w-full px-3 py-2 border border-custom rounded-lg focus:outline-none disabled:opacity-50 disabled:bg-gray-50 bg-white hover:bg-gray-50 transition-colors flex items-center gap-1.5"
       >
-        <img src={selectedChain.icon} alt={selectedChain.label} className="w-5 h-5" />
+        <Image src={selectedChain.icon} alt={selectedChain.label} width={20} height={20} />
         <span className="flex-1 text-left">{selectedChain.label}</span>
         <span className="text-gray-400">▼</span>
       </button>
@@ -37,8 +38,8 @@ export default function ChainSelector({ value, onChange, disabled }: ChainSelect
       {/* Dropdown */}
       {isOpen && !disabled && (
         <>
-          <div 
-            className="fixed inset-0 z-10" 
+          <div
+            className="fixed inset-0 z-10"
             onClick={() => setIsOpen(false)}
           />
           <div className="absolute z-20 w-full mt-1 bg-white border border-custom rounded-lg shadow-lg overflow-hidden">
@@ -50,11 +51,10 @@ export default function ChainSelector({ value, onChange, disabled }: ChainSelect
                   onChange(chain.value);
                   setIsOpen(false);
                 }}
-                className={`w-full px-3 py-2 flex items-center gap-1.5 hover:bg-gray-50 transition-colors ${
-                  chain.value === value ? 'bg-blue-50' : ''
-                }`}
+                className={`w-full px-3 py-2 flex items-center gap-1.5 hover:bg-gray-50 transition-colors ${chain.value === value ? 'bg-blue-50' : ''
+                  }`}
               >
-                <img src={chain.icon} alt={chain.label} className="w-5 h-5" />
+                <Image src={chain.icon} alt={chain.label} width={20} height={20} />
                 <span>{chain.label}</span>
               </button>
             ))}

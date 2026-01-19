@@ -35,7 +35,7 @@ async function main() {
 
   // ==================== 3. Deploy BondSeries ====================
   console.log("3️⃣ Deploying BondSeries...");
-  const MATURITY_HOURS = 168; // 1 week (168 hours)
+  const MATURITY_HOURS = 336; // 2 weeks (336 hours)
   const BondSeries = await ethers.getContractFactory("BondSeries");
   const bondSeries = await BondSeries.deploy(
     bondTokenAddress,

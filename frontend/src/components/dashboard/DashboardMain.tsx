@@ -1,37 +1,36 @@
 "use client";
 
-import DashboardOverview from "./DashboardOverview";
 import YourPosition from "../portfolio/YourPosition";
-import ClaimCard from "../portfolio/ClaimCard";
-import RedeemCard from "../portfolio/RedeemCard";
+import WithdrawCard from "../portfolio/WithdrawCard"; // Combined card
+import YieldChart from "../portfolio/YieldChart";
+import RecentActivity from "../portfolio/RecentActivity";
 
 export default function DashboardMain() {
     return (
-        <div className="max-w-6xl mx-auto pb-20 pt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-                {/* COLUMN 1 */}
-                <div className="space-y-8">
-                    {/* Market Status */}
-                    <DashboardOverview />
+        <div className="w-full pb-20">
+            <div className="max-w-6xl mx-auto px-4 space-y-8">
 
-                    {/* Redeem Principal */}
-                    <RedeemCard />
-                </div>
 
-                {/* COLUMN 2 */}
-                <div className="space-y-8">
-                    {/* Your Portfolio */}
-                    <div className="space-y-6">
-                        {/* Fake Header to match Market Status style if needed, or just Component */}
-                        <div className="flex justify-between items-end md:items-center px-1 min-h-[40px]">
-                            <h3 className="text-xl font-bold text-gray-900">Your Portfolio</h3>
-                        </div>
-                        <YourPosition />
+                {/* 2. Main Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-stretch">
+
+                    {/* COLUMN 1 (Left - 60% width for Charts/Analytics) */}
+                    <div className="lg:col-span-3">
+                        {/* Yield Analytics Chart */}
+                        <YieldChart />
                     </div>
 
-                    {/* Claim Coupon */}
-                    <ClaimCard />
+                    {/* COLUMN 2 (Right - 40% width for Portfolio Actions) */}
+                    <div className="lg:col-span-2 flex flex-col gap-6">
+                        <YourPosition />
+                        <div className="flex-1">
+                            <WithdrawCard />
+                        </div>
+                    </div>
                 </div>
+
+                {/* 3. Recent Activity Section */}
+                <RecentActivity />
             </div>
         </div>
     );

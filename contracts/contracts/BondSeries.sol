@@ -88,14 +88,15 @@ contract BondSeries is AccessControl, ReentrancyGuard, Pausable {
         address bondToken_,
         address usdc_,
         address keeper_,
-        uint256 maturityHours_
+        uint256 maturityHours_,
+        address owner_
     ) {
         bondToken = BondToken(bondToken_);
         usdc = IERC20(usdc_);
         maturityDate = block.timestamp + (maturityHours_ * 1 hours);
         
         // Setup roles
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, owner_);
         _grantRole(KEEPER_ROLE, keeper_);
         
         // Initialize distribution tracking

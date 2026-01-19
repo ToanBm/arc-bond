@@ -2,6 +2,7 @@
 
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi';
 import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
 
 const ARC_TESTNET_CHAIN_ID = 5042002;
 
@@ -67,22 +68,21 @@ export const WalletButton = () => {
 
   if (isConnected) {
     const isCorrectNetwork = chainId === ARC_TESTNET_CHAIN_ID;
-    
+
     return (
       <div className="flex items-center gap-2">
         {/* Network Status Button */}
         <button
           onClick={() => !isCorrectNetwork && switchChain({ chainId: ARC_TESTNET_CHAIN_ID })}
           disabled={isCorrectNetwork}
-          className={`h-9 px-4 rounded-lg font-medium text-sm flex items-center gap-2 transition-all ${
-            isCorrectNetwork
-              ? 'bg-gray-100 text-gray-600 border border-custom cursor-default'
-              : 'bg-orange-50 text-orange-700 border border-orange-300 hover:bg-orange-100 animate-pulse'
-          }`}
+          className={`h-9 px-4 rounded-lg font-medium text-sm flex items-center gap-2 transition-all ${isCorrectNetwork
+            ? 'bg-gray-100 text-gray-600 border border-custom cursor-default'
+            : 'bg-orange-50 text-orange-700 border border-orange-300 hover:bg-orange-100 animate-pulse'
+            }`}
         >
           {isCorrectNetwork ? (
             <>
-              <img src="/arc.svg" alt="Arc" className="w-4 h-4" />
+              <Image src="/arc.svg" alt="Arc" width={16} height={16} />
               Arc Testnet
             </>
           ) : (
@@ -92,7 +92,7 @@ export const WalletButton = () => {
             </>
           )}
         </button>
-        
+
         {/* Wallet Address Button */}
         <div className="relative" ref={dropdownRef}>
           <button
@@ -103,65 +103,66 @@ export const WalletButton = () => {
               {address?.slice(0, 6)}...{address?.slice(-4)}
             </div>
           </button>
-        
-        {isDropdownOpen && (
-          <div className="absolute right-0 mt-2 w-52 bg-secondary rounded-lg shadow-lg border border-custom z-50">
-            <div className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm text-gray-900 font-semibold">Wallet Address</span>
-                <button
-                  onClick={() => setIsDropdownOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </div>
-              
-              <div className="flex items-center gap-2 mb-3 p-2 bg-gray-50 rounded border border-custom">
-                <span className="font-mono text-sm flex-1 text-gray-900">
-                  {address?.slice(0, 6)}...{address?.slice(-4)}
-                </span>
-                <button
-                  onClick={copyAddress}
-                  className={`p-1 transition-all ${
-                    copied 
-                      ? 'text-green-600 scale-110' 
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                  title="Copy address"
-                >
-                  <img 
-                    src="/copy.svg" 
-                    alt="Copy" 
-                    className={`w-4 h-4 transition-transform ${copied ? 'scale-110' : ''}`}
-                  />
-                </button>
-              </div>
-              
-              {chainId !== ARC_TESTNET_CHAIN_ID && (
-                <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-gray-700">
-                  ⚠️ Wrong network. Please switch to Arc Testnet.
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 mt-2 w-52 bg-secondary rounded-lg shadow-lg border border-custom z-50">
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-900 font-semibold">Wallet Address</span>
                   <button
-                    onClick={() => switchChain({ chainId: ARC_TESTNET_CHAIN_ID })}
-                    className="block w-full mt-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1 px-2 rounded text-xs"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="text-gray-400 hover:text-gray-600"
                   >
-                    Switch to Arc Testnet
+                    ✕
                   </button>
                 </div>
-              )}
-              
-              <button
-                onClick={() => {
-                  disconnect();
-                  setIsDropdownOpen(false);
-                }}
-                className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded text-sm"
-              >
-                Disconnect
-              </button>
+
+                <div className="flex items-center gap-2 mb-3 p-2 bg-gray-50 rounded border border-custom">
+                  <span className="font-mono text-sm flex-1 text-gray-900">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </span>
+                  <button
+                    onClick={copyAddress}
+                    className={`p-1 transition-all ${copied
+                      ? 'text-green-600 scale-110'
+                      : 'text-gray-600 hover:text-gray-900'
+                      }`}
+                    title="Copy address"
+                  >
+                    <Image
+                      src="/copy.svg"
+                      alt="Copy"
+                      width={16}
+                      height={16}
+                      className={`transition-transform ${copied ? 'scale-110' : ''}`}
+                    />
+                  </button>
+                </div>
+
+                {chainId !== ARC_TESTNET_CHAIN_ID && (
+                  <div className="mb-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-gray-700">
+                    ⚠️ Wrong network. Please switch to Arc Testnet.
+                    <button
+                      onClick={() => switchChain({ chainId: ARC_TESTNET_CHAIN_ID })}
+                      className="block w-full mt-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1 px-2 rounded text-xs"
+                    >
+                      Switch to Arc Testnet
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => {
+                    disconnect();
+                    setIsDropdownOpen(false);
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-2 px-4 rounded text-sm"
+                >
+                  Disconnect
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
         </div>
       </div>
     );

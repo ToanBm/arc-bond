@@ -20,7 +20,10 @@ export default function ClaimCard() {
     if (isSuccess && hash && claimingAmount) {
       toast.success(
         <div className="flex flex-col gap-1">
-          <div>✅ Claimed {claimingAmount} USDC interest successfully!</div>
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-500">✓</span>
+            <span>Claimed {claimingAmount} USDC interest successfully!</span>
+          </div>
           <a
             href={`https://testnet.arcscan.app/tx/${hash}`}
             target="_blank"
@@ -47,8 +50,11 @@ export default function ClaimCard() {
     <div className="card">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-900">Claim Interest</h3>
-        <div className="text-sm text-gray-600">
-          ℹ️ Interest is accrued real-time at 1% per day
+        <div className="flex items-center gap-1.5 text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-custom-indigo">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+          </svg>
+          Interest accrues real-time at 1% per day
         </div>
       </div>
 

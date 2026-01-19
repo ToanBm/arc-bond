@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useAccount, useSwitchChain, useBalance } from "wagmi";
 import { sepolia, baseSepolia, arbitrumSepolia, optimismSepolia } from "wagmi/chains";
 import { formatUnits } from "viem";
@@ -45,14 +46,14 @@ export default function BridgeCard() {
     chainId: CHAIN_ID_MAP[fromChain],
   });
 
-  const formattedBalance = usdcBalance 
+  const formattedBalance = usdcBalance
     ? parseFloat(formatUnits(usdcBalance.value, usdcBalance.decimals)).toFixed(2)
     : "0.00";
 
   // Handle chain selection change
   const handleChainChange = (newChain: SupportedChain) => {
     setSelectedChain(newChain);
-    
+
     const targetChainId = CHAIN_ID_MAP[fromChain];
     if (chain?.id !== targetChainId && switchChain) {
       try {
@@ -87,7 +88,7 @@ export default function BridgeCard() {
       setAmount("");
     } catch (error: unknown) {
       console.error("Bridge error:", error);
-      
+
       // Show multi-line error message
       const errorMsg = error instanceof Error ? error.message : "Bridge failed";
       toast.error(errorMsg, {
@@ -120,7 +121,7 @@ export default function BridgeCard() {
             </label>
             {isReverse ? (
               <div className="w-full px-3 py-2 border border-custom rounded-lg bg-gray-100 cursor-not-allowed flex items-center gap-1.5">
-                <img src="/arc.svg" alt="Arc" className="w-5 h-5" />
+                <Image src="/arc.svg" alt="Arc" width={20} height={20} />
                 <span>Arc Testnet</span>
               </div>
             ) : (
@@ -160,7 +161,7 @@ export default function BridgeCard() {
               />
             ) : (
               <div className="w-full px-3 py-2 border border-custom rounded-lg bg-gray-100 cursor-not-allowed flex items-center gap-1.5">
-                <img src="/arc.svg" alt="Arc" className="w-5 h-5" />
+                <Image src="/arc.svg" alt="Arc" width={20} height={20} />
                 <span>Arc Testnet</span>
               </div>
             )}
@@ -217,24 +218,22 @@ export default function BridgeCard() {
             {steps.map((step, idx) => (
               <div key={idx} className="flex items-center gap-3">
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                    step.status === "complete"
-                      ? "bg-green-500 text-white"
-                      : step.status === "loading"
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${step.status === "complete"
+                    ? "bg-green-500 text-white"
+                    : step.status === "loading"
                       ? "bg-blue-500 text-white animate-pulse"
                       : "bg-gray-300 text-gray-600"
-                  }`}
+                    }`}
                 >
                   {step.status === "complete" ? "✓" : idx + 1}
                 </div>
                 <span
-                  className={`text-sm ${
-                    step.status === "complete"
-                      ? "text-green-700 font-medium"
-                      : step.status === "loading"
+                  className={`text-sm ${step.status === "complete"
+                    ? "text-green-700 font-medium"
+                    : step.status === "loading"
                       ? "text-blue-700 font-medium"
                       : "text-gray-500"
-                  }`}
+                    }`}
                 >
                   {step.name}
                   {step.status === "loading" && "..."}
@@ -250,10 +249,10 @@ export default function BridgeCard() {
           disabled={!isConnected || !amount || bridgeStatus === "bridging"}
           className="w-full btn-primary font-medium py-2 px-4 disabled:opacity-50"
         >
-          {!isConnected 
-            ? "Connect wallet to bridge" 
-            : bridgeStatus === "bridging" 
-              ? "Bridging..." 
+          {!isConnected
+            ? "Connect wallet to bridge"
+            : bridgeStatus === "bridging"
+              ? "Bridging..."
               : "Bridge USDC"}
         </button>
 

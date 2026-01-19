@@ -119,7 +119,8 @@ contract BondFactory is AccessControl {
             bondToken,
             usdc,
             keeper_,
-            maturityHours_
+            maturityHours_,
+            msg.sender // owner
         );
         bondSeries = address(newBondSeries);
         

@@ -29,7 +29,7 @@ async function main() {
   // You can modify these parameters
   const poolName = process.env.POOL_NAME || "ArcBond Series 1";
   const keeperAddress = process.env.KEEPER_ADDRESS || "0x7A6b18979a03d15DCBd5bB68E437aF61b0BD5C1d";
-  const maturityHours = process.env.MATURITY_HOURS ? parseInt(process.env.MATURITY_HOURS) : 168; // 168 hours default (1 week)
+  const maturityHours = process.env.MATURITY_HOURS ? parseInt(process.env.MATURITY_HOURS) : 336; // 336 hours default (2 weeks)
 
   console.log("2️⃣ Pool Parameters:");
   console.log("   Name:          ", poolName);

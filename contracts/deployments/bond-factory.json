@@ -23,6 +23,16 @@
           "maturityDate": "1767605588",
           "createdAt": "1767000788",
           "isActive": true
+        },
+        "2": {
+          "poolId": "2",
+          "name": "ArcBond Series 1",
+          "symbol": "arcUSDC",
+          "bondToken": "0x46Cd079E8eB39FAC057ab549E5879CCc353E2797",
+          "bondSeries": "0x58F80ba744c35EE9f488CC57Ef6C96393B4Ea79F",
+          "maturityDate": "1770005191",
+          "createdAt": "1768795591",
+          "isActive": true
         }
       }
     }

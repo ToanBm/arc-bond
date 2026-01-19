@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
 import { usePool } from "@/contexts/PoolContext";
 import MarketList from "./MarketList";
 import MyListings from "./MyListings";
@@ -11,13 +13,17 @@ type MarketTab = "buy" | "sell";
 export default function Market() {
     const [activeTab, setActiveTab] = useState<MarketTab>("buy");
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
+    const { address } = useAccount();
+    const queryClient = useQueryClient();
     const { selectedPool } = usePool();
     const bondTokenAddress = selectedPool?.bondToken;
 
     const handleListingCreated = () => {
         setIsCreateModalOpen(false);
-        setRefreshKey(prev => prev + 1); // Trigger refresh
+        // Refresh My Listings data
+        queryClient.invalidateQueries({ queryKey: ['myListings', address] });
+        // Also refresh general market list if needed
+        queryClient.invalidateQueries({ queryKey: ['marketListings'] });
     };
 
     return (
@@ -59,7 +65,7 @@ export default function Market() {
 
             {/* Main Content Area - Inside card */}
             <div className="card !p-0 overflow-hidden">
-                {activeTab === "buy" ? <MarketList /> : <MyListings key={refreshKey} />}
+                {activeTab === "buy" ? <MarketList /> : <MyListings />}
             </div>
 
             {/* Create Listing Modal */}

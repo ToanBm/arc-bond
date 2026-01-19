@@ -91,3 +91,14 @@ export {
 export {
   useApproveBondToken,
 } from './useApproveBondToken';
+
+// User Activity
+export {
+  useUserActivity,
+} from './useUserActivity';
+
+// TVL History
+export {
+  usePoolTVLHistory,
+  type TimeRange,
+} from './usePoolTVLHistory';

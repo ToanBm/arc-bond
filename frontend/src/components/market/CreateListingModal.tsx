@@ -162,11 +162,9 @@ export default function CreateListingModal({ isOpen, onClose, bondTokenAddress }
                             className="w-full px-4 py-2 border border-custom rounded-lg focus:outline-none font-bold"
                             disabled={step !== "input"}
                         >
-                            <option value="1">1 Hour</option>
-                            <option value="6">6 Hours</option>
                             <option value="24">24 Hours</option>
-                            <option value="72">3 Days</option>
-                            <option value="168">7 Days</option>
+                            <option value="168">1 Week</option>
+                            <option value="720">1 Month</option>
                         </select>
                     </div>
 

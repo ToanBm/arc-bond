@@ -2,55 +2,49 @@
 
 import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCancelOrder } from "@/hooks";
 import { SignedOrder } from "@/types/market";
 import toast from "react-hot-toast";
 
 export default function MyListings() {
     const { address } = useAccount();
-    const [myOrders, setMyOrders] = useState<SignedOrder[]>([]);
+    const queryClient = useQueryClient();
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
     const { cancelOrder, isSuccess } = useCancelOrder();
 
-    // Fetch user's orders
-    useEffect(() => {
-        if (!address) return;
-        fetch(`/api/orders?seller=${address}`)
-            .then((res) => res.json())
-            .then((data) => setMyOrders(data))
-            .catch((err) => console.error("Failed to fetch orders:", err));
-    }, [address]);
+    // Use React Query for fetching
+    const { data: myOrders = [], isLoading } = useQuery({
+        queryKey: ['myListings', address],
+        queryFn: async () => {
+            if (!address) return [];
+            const res = await fetch(`/api/orders?seller=${address}`);
+            if (!res.ok) throw new Error("Failed to fetch orders");
+            return res.json() as Promise<SignedOrder[]>;
+        },
+        enabled: !!address, // Only fetch if address exists
+    });
 
-    // Refetch after successful cancel
+    // Handle successful cancel
     useEffect(() => {
         if (isSuccess && address && cancellingOrderId) {
             toast.success("Listing cancelled!");
 
-            // Find the cancelled order before removing it
-            setMyOrders(prev => {
-                const cancelledOrder = prev.find(order => order.nonce === cancellingOrderId);
+            // Find the cancelled order (from cached data)
+            const cancelledOrder = myOrders.find(order => order.nonce === cancellingOrderId);
 
-                // Delete from API (if order exists there)
-                if (cancelledOrder?.signature) {
-                    fetch(`/api/orders?signature=${cancelledOrder.signature}`, { method: "DELETE" })
-                        .catch((err) => console.error("Failed to delete order from API:", err));
-                }
+            // Api delete
+            if (cancelledOrder?.signature) {
+                fetch(`/api/orders?signature=${cancelledOrder.signature}`, { method: "DELETE" })
+                    .catch((err) => console.error("Failed to delete order from API:", err));
+            }
 
-                // Remove cancelled order from state immediately (optimistic update)
-                return prev.filter(order => order.nonce !== cancellingOrderId);
-            });
-
-            // Refetch to ensure sync
-            setTimeout(() => {
-                fetch(`/api/orders?seller=${address}`)
-                    .then((res) => res.json())
-                    .then((data) => setMyOrders(data))
-                    .catch((err) => console.error("Failed to refetch orders:", err));
-            }, 500); // Small delay to ensure API DELETE completes
+            // Invalidate query to refetch fresh data
+            queryClient.invalidateQueries({ queryKey: ['myListings', address] });
 
             setCancellingOrderId(null);
         }
-    }, [isSuccess, address, cancellingOrderId]);
+    }, [isSuccess, address, cancellingOrderId, myOrders, queryClient]);
 
     const handleCancel = (nonce: string) => {
         try {
@@ -62,6 +56,14 @@ export default function MyListings() {
             setCancellingOrderId(null);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+            </div>
+        );
+    }
 
     return (
         <div>

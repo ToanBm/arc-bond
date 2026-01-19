@@ -119,14 +119,13 @@ export function PoolProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [refetchPools]);
 
-  // Initialize selected pool when chain or pools change
+  // Initialize or Update selected pool to always be the newest one
   useEffect(() => {
     if (chainId === ARC_TESTNET_CHAIN_ID && poolIds.length > 0) {
-      const currentSelected = selectedPoolId;
-      const isValidPool = currentSelected && poolIds.includes(currentSelected);
+      const newestPoolId = poolIds[0];
 
-      if (!isValidPool) {
-        const newestPoolId = poolIds[0];
+      // If no pool selected OR current selected is NOT the newest one -> Switch to newest
+      if (selectedPoolId !== newestPoolId) {
         setSelectedPoolIdState(newestPoolId);
         localStorage.setItem("selectedPoolId", newestPoolId);
       }
