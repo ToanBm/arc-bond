@@ -5,7 +5,7 @@ import {
     UserPosition,
     Activity,
     // BondToken as BondTokenEntity // Avoid name clash if needed, but here we can rely on context.BondToken
-} from "generated";
+} from "../generated";
 
 // Helper to generate IDs
 const getPositionId = (user: string, token: string) => `${user}-${token}`;
