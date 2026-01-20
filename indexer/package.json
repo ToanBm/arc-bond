@@ -11,7 +11,7 @@
     "docker-stop": "docker compose down"
   },
   "dependencies": {
-    "envio": "^2.30.1"
+    "envio": "^2.31.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
