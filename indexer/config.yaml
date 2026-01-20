@@ -5,7 +5,7 @@ networks:
   - id: 5042002
     rpc_config:
       url: https://rpc.testnet.arc.network
-    start_block: 0
+    start_block: 22000000
     contracts:
       - name: BondFactory
         address:
