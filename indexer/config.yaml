@@ -6,8 +6,6 @@ networks:
   - id: 5042002
     hypersync_config:
       url: https://arc-testnet.hypersync.xyz
-    rpc_config:
-      url: https://5042002.rpc.thirdweb.com
     start_block: 21000000
     contracts:
       - name: BondFactory
