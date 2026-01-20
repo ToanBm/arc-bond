@@ -1,9 +1,14 @@
+
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 # trigger git update
 name: arc-bond-indexer
 networks:
   - id: 5042002
-    start_block: 22000000
+    hypersync_config:
+      url: https://arc-testnet.hypersync.xyz
+    rpc_config:
+      url: https://5042002.rpc.thirdweb.com
+    start_block: 21000000
     contracts:
       - name: BondFactory
         address:
