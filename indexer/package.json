@@ -2,19 +2,24 @@
   "name": "arc-bond-indexer",
   "version": "0.1.0",
   "scripts": {
-    "dev": "envio dev",
-    "start": "envio start",
-    "test": "envio test",
+    "clean": "tsc --clean",
+    "build": "tsc --build",
+    "watch": "tsc --watch",
     "codegen": "envio codegen",
-    "build": "envio build",
-    "docker-start": "docker compose up -d",
-    "docker-stop": "docker compose down"
+    "dev": "envio dev",
+    "start": "envio start"
   },
   "dependencies": {
-    "envio": "^2.31.0"
+    "envio": "^2.32.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
     "typescript": "^5.4.5"
+  },
+  "optionalDependencies": {
+    "generated": "./generated"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

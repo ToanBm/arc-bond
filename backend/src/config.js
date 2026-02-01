@@ -5,6 +5,10 @@ dotenv.config();
 export const RPC_URL = process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
 export const CHAIN_ID = process.env.CHAIN_ID || '5042002';
 
+// Envio Indexer config
+export const ENVIO_GRAPHQL_ENDPOINT = process.env.ENVIO_GRAPHQL_ENDPOINT;
+export const ENVIO_API_TOKEN = process.env.ENVIO_API_TOKEN;
+
 // Keeper wallet
 export const KEEPER_PRIVATE_KEY = process.env.KEEPER_PRIVATE_KEY;
 

@@ -4,23 +4,22 @@ import {
     Pool,
     UserPosition,
     Activity,
-    PoolSnapshot,
-} from "../generated";
+} from "generated";
 
 // Helper to generate IDs
 const getPositionId = (user: string, token: string) => `${user}-${token}`;
 
-BondFactory.PoolCreated.contractRegister(({ event, context }) => {
+BondFactory.PoolCreated.contractRegister(({ event, context }: any) => {
     context.addBondToken(event.params.bondToken);
     context.addBondSeries(event.params.bondSeries);
 });
 
-BondFactory.PoolCreated.handler(async ({ event, context }) => {
+BondFactory.PoolCreated.handler(async ({ event, context }: any) => {
     const poolId = event.params.poolId.toString();
     const bondTokenAddress = event.params.bondToken.toLowerCase();
 
     // Create Pool Entity
-    const pool: Pool = {
+    const pool: any = {
         id: poolId,
         poolId: event.params.poolId,
         bondToken: bondTokenAddress,
@@ -34,15 +33,15 @@ BondFactory.PoolCreated.handler(async ({ event, context }) => {
     context.Pool.set(pool);
 
     // Initialize BondToken Entity
-    const bondToken: BondToken = {
+    const bondTokenEntity: any = {
         id: bondTokenAddress,
         pool_id: poolId,
         totalSupply: 0n,
     };
-    context.BondToken.set(bondToken);
+    context.BondToken.set(bondTokenEntity);
 });
 
-BondToken.Transfer.handler(async ({ event, context }) => {
+BondToken.Transfer.handler(async ({ event, context }: any) => {
     const amount = event.params.value;
     const from = event.params.from.toLowerCase();
     const to = event.params.to.toLowerCase();

@@ -7,7 +7,9 @@ import {
   USE_FACTORY,
   POOL_IDS,
   BOND_SERIES_ABI,
-  BOND_FACTORY_ABI
+  BOND_FACTORY_ABI,
+  ENVIO_GRAPHQL_ENDPOINT,
+  ENVIO_API_TOKEN
 } from '../config.js';
 
 /**
@@ -43,6 +45,55 @@ export function getBondFactoryContract() {
 }
 
 /**
+ * Fetch all pools from Envio Indexer
+ */
+async function fetchPoolsFromEnvio() {
+  if (!ENVIO_GRAPHQL_ENDPOINT) {
+    throw new Error('ENVIO_GRAPHQL_ENDPOINT not configured');
+  }
+
+  console.log('📡 Fetching pools from Envio Indexer...');
+
+  const query = `
+    query GetActivePools {
+      Pool(where: { isActive: { _eq: true } }) {
+        poolId
+        bondSeries
+        bondToken
+        name
+        symbol
+        maturityDate
+        isActive
+      }
+    }
+  `;
+
+  const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(ENVIO_API_TOKEN ? { 'Authorization': `Bearer ${ENVIO_API_TOKEN}` } : {})
+    },
+    body: JSON.stringify({ query })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Envio API error: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  if (result.errors) {
+    throw new Error(`GraphQL Error: ${result.errors[0].message}`);
+  }
+
+  return result.data.Pool.map(pool => ({
+    ...pool,
+    poolId: pool.poolId.toString(),
+    maturityDate: BigInt(pool.maturityDate)
+  }));
+}
+
+/**
  * Get all pools to monitor
  * Returns array of { poolId, bondSeries, name, symbol, maturityDate, isActive }
  */
@@ -62,7 +113,20 @@ export async function getAllPoolsToMonitor() {
     }];
   }
 
-  // Factory mode
+  // 1. Try Envio Indexer first (High performance)
+  if (ENVIO_GRAPHQL_ENDPOINT) {
+    try {
+      const pools = await fetchPoolsFromEnvio();
+      if (pools && pools.length > 0) {
+        console.log(`   ✅ Successfully fetched ${pools.length} pools from Envio`);
+        return pools;
+      }
+    } catch (error) {
+      console.warn(`   ⚠️ Envio fetch failed, falling back to RPC: ${error.message}`);
+    }
+  }
+
+  // 2. Fallback: Factory mode via RPC (Legacy/Slow)
   let contract;
   try {
     const factory = getBondFactoryContract();
