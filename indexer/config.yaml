@@ -10,7 +10,7 @@ networks:
     contracts:
       - name: BondFactory
         address:
-          - 0x4fA228e2eADF00248D770527bfb15c536a8A40bF
+          - 0x88b1B2e3D93eC6AECa6818E904852cE6c3b80759
         handler: src/EventHandlers.ts
         events:
           - event: PoolCreated(uint256 indexed poolId, address indexed bondToken, address indexed bondSeries, uint256 maturityDate, string name, string symbol)

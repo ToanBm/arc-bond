@@ -31,3 +31,10 @@ type Activity {
   timestamp: BigInt!
   txHash: String!
 }
+
+type PoolSnapshot {
+  id: ID! # poolId + timestamp_day
+  pool: Pool!
+  totalSupply: BigInt!
+  timestamp: BigInt!
+}

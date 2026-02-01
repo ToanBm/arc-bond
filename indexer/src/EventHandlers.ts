@@ -4,7 +4,7 @@ import {
     Pool,
     UserPosition,
     Activity,
-    // BondToken as BondTokenEntity // Avoid name clash if needed, but here we can rely on context.BondToken
+    PoolSnapshot,
 } from "../generated";
 
 // Helper to generate IDs
@@ -33,11 +33,13 @@ BondFactory.PoolCreated.handler(async ({ event, context }) => {
 
     context.Pool.set(pool);
 
-    // Note: Dynamic template creation is handled automatically if defined in config, 
-    // but if we used templates in config.yaml, we'd don't need explicit code here for the template tracking itself depending on Envio version.
-    // With Envio 2.x, if we put "BondToken" in config without specific address, it might try to index all matching events or we need dynamic contracts.
-    // For simplicity in this config, we likely defined `BondToken` without address, implying it might catch all if we didn't specify factory loader or we need to revisit config for Factory pattern if it wasn't set up as dynamic.
-    // However, let's assume Envio's codegen handles the mapping.
+    // Initialize BondToken Entity
+    const bondToken: BondToken = {
+        id: bondTokenAddress,
+        pool_id: poolId,
+        totalSupply: 0n,
+    };
+    context.BondToken.set(bondToken);
 });
 
 BondToken.Transfer.handler(async ({ event, context }) => {
@@ -106,5 +108,31 @@ BondToken.Transfer.handler(async ({ event, context }) => {
             balance: receiverPos.balance + amount,
         };
         context.UserPosition.set(receiverPos);
+    }
+
+    // 5. Update BondToken Total Supply and Create Snapshot
+    let bondToken = await context.BondToken.get(tokenAddress);
+    if (bondToken) {
+        let newTotalSupply = bondToken.totalSupply;
+        if (activityType === "MINT") newTotalSupply += amount;
+        else if (activityType === "BURN") newTotalSupply -= amount;
+
+        if (newTotalSupply !== bondToken.totalSupply) {
+            context.BondToken.set({
+                ...bondToken,
+                totalSupply: newTotalSupply,
+            });
+
+            // Create Snapshot for Charting (daily bucket)
+            const dayInternal = Math.floor(Number(timestamp) / 86400);
+            const snapshotId = `${bondToken.pool_id}-${dayInternal}`;
+            const snapshot: PoolSnapshot = {
+                id: snapshotId,
+                pool_id: bondToken.pool_id,
+                totalSupply: newTotalSupply,
+                timestamp: timestamp,
+            };
+            context.PoolSnapshot.set(snapshot);
+        }
     }
 });
