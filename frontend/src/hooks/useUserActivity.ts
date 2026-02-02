@@ -1,6 +1,6 @@
-import { useAccount } from 'wagmi';
 import { useState, useEffect } from 'react';
 import { formatUnits } from 'viem';
+import { usePool } from '@/contexts/PoolContext';
 import { ENVIO_GRAPHQL_ENDPOINT, ENVIO_QUERIES } from '@/config/envio';
 
 export type ActivityType = 'Deposit' | 'Redeem' | 'Claim Interest' | 'Transfer' | 'MINT' | 'BURN';
@@ -15,6 +15,7 @@ export interface ActivityItem {
     hash: string;
     timestamp: number;
     color: string;
+    user: string;
 }
 
 interface EnvioActivity {
@@ -23,32 +24,36 @@ interface EnvioActivity {
     activityType: ActivityType;
     amount: string;
     txHash: string;
+    user: string;
 }
 
 /**
- * Hook to fetch user's recent activity logs from Envio Indexer
+ * Hook to fetch recent activity logs for the current pool from Envio Indexer
  */
 export function useUserActivity() {
-    const { address } = useAccount();
+    const { selectedPool } = usePool();
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        const userAddress = address;
-        if (!userAddress) return;
+        const bondToken = selectedPool?.bondToken;
+        if (!bondToken) {
+            setActivities([]);
+            return;
+        }
 
         let isMounted = true;
 
         async function fetchActivities() {
-            if (!userAddress) return;
+            if (!bondToken) return;
             setIsLoading(true);
             try {
                 const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        query: ENVIO_QUERIES.GET_USER_ACTIVITY,
-                        variables: { user: userAddress.toLowerCase() }
+                        query: ENVIO_QUERIES.GET_RECENT_ACTIVITY,
+                        variables: { bondToken: bondToken.toLowerCase() }
                     })
                 });
 
@@ -64,14 +69,17 @@ export function useUserActivity() {
                     else if (type === 'BURN' || type === 'Redeem') color = 'text-rose-600';
                     else if (type === 'Transfer') color = 'text-emerald-600';
 
+                    const txHash = item.txHash || item.id || '0x';
+
                     return {
                         id: item.id,
+                        user: item.user,
                         type: type === 'MINT' ? 'Deposit' : type === 'BURN' ? 'Redeem' : type,
-                        amount: formatUnits(BigInt(item.amount) / BigInt(10), 6), // Fixed: Divide by 10 to show USDC value
+                        amount: formatUnits(BigInt(item.amount) / BigInt(10), 6),
                         asset: 'USDC',
                         time: timestamp > 0 ? formatRelativeTime(timestamp) : 'Just now',
                         status: 'Success',
-                        hash: item.txHash,
+                        hash: txHash,
                         timestamp: timestamp,
                         color: color
                     };
@@ -81,7 +89,7 @@ export function useUserActivity() {
                     setActivities(formattedActivities);
                 }
             } catch (error) {
-                console.error("Failed to fetch Envio activity:", error);
+                // Silently fail or handle error gracefully
             } finally {
                 if (isMounted) setIsLoading(false);
             }
@@ -93,7 +101,7 @@ export function useUserActivity() {
             isMounted = false;
             clearInterval(interval);
         };
-    }, [address]);
+    }, [selectedPool?.bondToken]);
 
     return { activities, isLoading };
 }

@@ -37,7 +37,7 @@ export function saveToken(token: LocalTokenInfo) {
     localStorage.setItem(key, JSON.stringify(updated));
 
   } catch (err) {
-    console.error("❌ Failed to save token:", err);
+    // Ignore storage errors
   }
 }
 
@@ -49,7 +49,6 @@ export function getTokens(chainId: number): LocalTokenInfo[] {
     if (!stored) return [];
     return JSON.parse(stored);
   } catch (err) {
-    console.error("❌ Failed to load tokens:", err);
     return [];
   }
 }
@@ -66,7 +65,7 @@ export function removeToken(chainId: number, address: string) {
     localStorage.setItem(key, JSON.stringify(filtered));
 
   } catch (err) {
-    console.error("❌ Failed to remove token:", err);
+    // Ignore
   }
 }
 
@@ -78,6 +77,6 @@ export function clearAllTokens() {
       .forEach((k) => localStorage.removeItem(k));
 
   } catch (err) {
-    console.error("❌ Failed to clear tokens:", err);
+    // Ignore
   }
 }

@@ -85,7 +85,7 @@ export function usePoolTVLHistory(range: TimeRange = 'ALL') {
                     setData(points);
                 }
             } catch (error) {
-                console.error("Failed to fetch Envio TVL history:", error);
+                // Silently fail
             } finally {
                 if (isMounted) setIsLoading(false);
             }

@@ -35,8 +35,7 @@ export default function MyListings() {
 
             // Api delete
             if (cancelledOrder?.signature) {
-                fetch(`/api/orders?signature=${cancelledOrder.signature}`, { method: "DELETE" })
-                    .catch((err) => console.error("Failed to delete order from API:", err));
+                fetch(`/api/orders?signature=${cancelledOrder.signature}`, { method: "DELETE" });
             }
 
             // Invalidate query to refetch fresh data

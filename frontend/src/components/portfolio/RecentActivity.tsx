@@ -4,12 +4,9 @@ import { usePortfolioData, useUserActivity } from "@/hooks";
 import { useState } from "react";
 
 export default function RecentActivity() {
-    const { isConnected } = usePortfolioData();
     const { activities, isLoading } = useUserActivity();
     const [currentPage, setCurrentPage] = useState(1);
     const pageSize = 5;
-
-    if (!isConnected) return null;
 
     const totalPages = Math.ceil(activities.length / pageSize);
     const startIndex = (currentPage - 1) * pageSize;
@@ -17,6 +14,11 @@ export default function RecentActivity() {
 
     const handlePrev = () => setCurrentPage(prev => Math.max(1, prev - 1));
     const handleNext = () => setCurrentPage(prev => Math.min(totalPages, prev + 1));
+
+    const formatAddress = (addr: string) => {
+        if (!addr) return '0x00...0000';
+        return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+    };
 
     return (
         <div className="card !p-0 overflow-hidden flex flex-col">
@@ -74,10 +76,10 @@ export default function RecentActivity() {
                         <thead>
                             <tr className="bg-gray-50/50">
                                 <th className="px-6 py-2 text-left text-xs font-semibold text-gray-500">Activity</th>
+                                <th className="px-6 py-2 text-center text-xs font-semibold text-gray-500">Wallet</th>
                                 <th className="px-6 py-2 text-center text-xs font-semibold text-gray-500">Amount</th>
                                 <th className="px-6 py-2 text-center text-xs font-semibold text-gray-500">Status</th>
-                                <th className="px-6 py-2 text-center text-xs font-semibold text-gray-500">Time</th>
-                                <th className="px-6 py-2 text-right text-xs font-semibold text-gray-500">Transaction</th>
+                                <th className="px-6 py-2 text-right text-xs font-semibold text-gray-500">Time</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -85,6 +87,11 @@ export default function RecentActivity() {
                                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors">
                                     <td className="px-6 py-2.5 whitespace-nowrap">
                                         <span className="font-semibold text-gray-900 text-sm">{item.type}</span>
+                                    </td>
+                                    <td className="px-6 py-2.5 whitespace-nowrap text-center">
+                                        <span className="font-mono text-xs text-gray-500" title={item.user}>
+                                            {formatAddress(item.user)}
+                                        </span>
                                     </td>
                                     <td className="px-6 py-2.5 whitespace-nowrap text-center">
                                         <span className={`font-bold text-sm ${item.color}`}>
@@ -96,19 +103,8 @@ export default function RecentActivity() {
                                             {item.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-2.5 whitespace-nowrap text-center text-xs text-gray-500">
+                                    <td className="px-6 py-2.5 whitespace-nowrap text-right text-xs text-gray-500">
                                         {item.time}
-                                    </td>
-                                    <td className="px-6 py-2.5 whitespace-nowrap text-right text-xs">
-                                        <a
-                                            href={`https://testnet.arcscan.app/tx/${item.hash}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-gray-400 hover:text-custom-indigo font-mono transition-colors"
-                                            title="View on Explorer"
-                                        >
-                                            {item.hash.slice(0, 6)}...{item.hash.slice(-4)} ↗
-                                        </a>
                                     </td>
                                 </tr>
                             ))}

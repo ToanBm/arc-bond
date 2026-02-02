@@ -159,7 +159,7 @@ export function useAllPools() {
 
       setData(formattedPools);
     } catch (error) {
-      console.error("Failed to fetch Envio pools:", error);
+      // Silently fail
     } finally {
       setIsLoading(false);
     }

@@ -15,10 +15,10 @@ export const ENVIO_QUERIES = {
             }
         }
     `,
-    GET_USER_ACTIVITY: `
-        query GetUserActivity($user: String!) {
+    GET_RECENT_ACTIVITY: `
+        query GetRecentActivity($bondToken: String!) {
             Activity(
-                where: { user: { _ilike: $user } },
+                where: { bondToken: { _ilike: $bondToken } },
                 order_by: { timestamp: desc },
                 limit: 20
             ) {
@@ -26,6 +26,7 @@ export const ENVIO_QUERIES = {
                 activityType
                 amount
                 bondToken
+                user
                 timestamp
                 txHash
             }
