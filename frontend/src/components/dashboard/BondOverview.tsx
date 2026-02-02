@@ -1,8 +1,6 @@
 "use client";
 
 import { useDashboardData } from "@/hooks";
-import { useTreasuryStatus } from "@/hooks/useBondSeries";
-import { formatUnits } from "viem";
 
 export default function BondOverview() {
   const { totalDeposited, timeToMaturity, isLoading, apy, solvencyRatio } = useDashboardData();

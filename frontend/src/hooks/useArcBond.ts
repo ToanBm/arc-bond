@@ -19,8 +19,8 @@ export function useDashboardData() {
 
   // Parse seriesInfo
   const maturityDate = seriesInfo?.[0] ? Number(seriesInfo[0]) : 0;
-  const totalDeposited = seriesInfo?.[1] ? formatUnits(seriesInfo[1], 6) : '0';
-  const totalSupply = seriesInfo?.[2] ? formatUnits(seriesInfo[2], 6) : '0';
+  const totalDeposited = seriesInfo?.[1] ? Number(formatUnits(seriesInfo[1], 6)).toFixed(2) : '0.00';
+  const totalSupply = seriesInfo?.[2] ? Number(formatUnits(seriesInfo[2], 6)).toFixed(2) : '0.00';
   const lastDistributionTime = seriesInfo?.[4] ? Number(seriesInfo[4]) : 0;
   const emergencyMode = seriesInfo?.[5] ?? false;
 
@@ -87,22 +87,22 @@ export function usePortfolioData() {
 
   // Calculate redeemable principal (arcUSDC / 10 = USDC)
   const redeemableAmount = (abondBalance && typeof abondBalance === 'bigint')
-    ? formatUnits(abondBalance / BigInt(10), 6)
-    : '0';
+    ? Number(formatUnits(abondBalance / BigInt(10), 6)).toFixed(2)
+    : '0.00';
 
   return {
     // Balances
-    abondBalance: (abondBalance && typeof abondBalance === 'bigint') ? formatUnits(abondBalance, 6) : '0',
+    abondBalance: (abondBalance && typeof abondBalance === 'bigint') ? Number(formatUnits(abondBalance, 6)).toFixed(2) : '0.00',
     abondBalanceRaw: (abondBalance && typeof abondBalance === 'bigint') ? abondBalance : BigInt(0),
-    usdcBalance: (usdcBalance && typeof usdcBalance === 'bigint') ? formatUnits(usdcBalance, 6) : '0',
+    usdcBalance: (usdcBalance && typeof usdcBalance === 'bigint') ? Number(formatUnits(usdcBalance, 6)).toFixed(2) : '0.00',
     usdcBalanceRaw: (usdcBalance && typeof usdcBalance === 'bigint') ? usdcBalance : BigInt(0),
 
     // Claimable
-    claimableAmount: claimableAmount ? formatUnits(claimableAmount, 6) : '0',
+    claimableAmount: claimableAmount ? Number(formatUnits(claimableAmount, 6)).toFixed(2) : '0.00',
     claimableAmountRaw: claimableAmount,
 
     // Interest Received (from contract state)
-    interestReceived: interestReceivedRaw ? formatUnits(interestReceivedRaw, 6) : '0',
+    interestReceived: interestReceivedRaw ? Number(formatUnits(interestReceivedRaw, 6)).toFixed(2) : '0.00',
 
     // Redeemable
     redeemableAmount,
@@ -126,9 +126,9 @@ export function useAdminData() {
   const { data: isPaused } = useIsPaused();
 
   // Treasury data
-  const treasuryBalance = treasuryStatus?.[0] ? formatUnits(treasuryStatus[0], 6) : '0';
-  const reserved = treasuryStatus?.[1] ? formatUnits(treasuryStatus[1], 6) : '0';
-  const withdrawable = treasuryStatus?.[2] ? formatUnits(treasuryStatus[2], 6) : '0';
+  const treasuryBalance = treasuryStatus?.[0] ? Number(formatUnits(treasuryStatus[0], 6)).toFixed(2) : '0.00';
+  const reserved = treasuryStatus?.[1] ? Number(formatUnits(treasuryStatus[1], 6)).toFixed(2) : '0.00';
+  const withdrawable = treasuryStatus?.[2] ? Number(formatUnits(treasuryStatus[2], 6)).toFixed(2) : '0.00';
 
   const totalSupply = seriesInfo?.[2] ? seriesInfo[2] : BigInt(0);
   const lastDistributionTime = seriesInfo?.[4] ? Number(seriesInfo[4]) : 0;

@@ -103,11 +103,32 @@ export function usePoolCount() {
   });
 }
 
+interface EnvioPool {
+  poolId: string;
+  bondToken: string;
+  bondSeries: string;
+  maturityDate: string;
+  name: string;
+  symbol: string;
+  createdAt: string;
+}
+
+export interface PoolData {
+  poolId: bigint;
+  bondToken: `0x${string}`;
+  bondSeries: `0x${string}`;
+  maturityDate: bigint;
+  name: string;
+  symbol: string;
+  createdAt: bigint;
+  isActive: boolean;
+}
+
 /**
  * Get all pools from Envio Indexer (fast and synced)
  */
 export function useAllPools() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<PoolData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchPools = async () => {
@@ -122,13 +143,13 @@ export function useAllPools() {
       });
 
       const result = await response.json();
-      const pools = result.data?.Pool || [];
+      const pools: EnvioPool[] = result.data?.Pool || [];
 
       // Format to match the expected format in PoolContext
-      const formattedPools = pools.map((p: any) => ({
+      const formattedPools: PoolData[] = pools.map((p) => ({
         poolId: BigInt(p.poolId),
-        bondToken: p.bondToken,
-        bondSeries: p.bondSeries,
+        bondToken: p.bondToken as `0x${string}`,
+        bondSeries: p.bondSeries as `0x${string}`,
         maturityDate: BigInt(p.maturityDate),
         name: p.name,
         symbol: p.symbol,

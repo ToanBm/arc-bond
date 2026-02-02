@@ -17,6 +17,14 @@ export interface ActivityItem {
     color: string;
 }
 
+interface EnvioActivity {
+    id: string;
+    timestamp: string;
+    activityType: ActivityType;
+    amount: string;
+    txHash: string;
+}
+
 /**
  * Hook to fetch user's recent activity logs from Envio Indexer
  */
@@ -26,11 +34,13 @@ export function useUserActivity() {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (!address) return;
+        const userAddress = address;
+        if (!userAddress) return;
 
         let isMounted = true;
 
         async function fetchActivities() {
+            if (!userAddress) return;
             setIsLoading(true);
             try {
                 const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
@@ -38,26 +48,26 @@ export function useUserActivity() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         query: ENVIO_QUERIES.GET_USER_ACTIVITY,
-                        variables: { user: address.toLowerCase() }
+                        variables: { user: userAddress.toLowerCase() }
                     })
                 });
 
                 const result = await response.json();
-                const items = result.data?.Activity || [];
+                const items: EnvioActivity[] = result.data?.Activity || [];
 
-                const formattedActivities: ActivityItem[] = items.map((item: any) => {
+                const formattedActivities: ActivityItem[] = items.map((item) => {
                     const timestamp = Number(item.timestamp);
                     const type = item.activityType;
 
                     let color = 'text-gray-600';
                     if (type === 'MINT' || type === 'Deposit') color = 'text-blue-600';
                     else if (type === 'BURN' || type === 'Redeem') color = 'text-rose-600';
-                    else if (type === 'TRANSFER') color = 'text-emerald-600';
+                    else if (type === 'Transfer') color = 'text-emerald-600';
 
                     return {
                         id: item.id,
                         type: type === 'MINT' ? 'Deposit' : type === 'BURN' ? 'Redeem' : type,
-                        amount: formatUnits(BigInt(item.amount) / 10n, 6), // Fixed: Divide by 10 to show USDC value
+                        amount: formatUnits(BigInt(item.amount) / BigInt(10), 6), // Fixed: Divide by 10 to show USDC value
                         asset: 'USDC',
                         time: timestamp > 0 ? formatRelativeTime(timestamp) : 'Just now',
                         status: 'Success',
