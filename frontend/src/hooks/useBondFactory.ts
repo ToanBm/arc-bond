@@ -1,7 +1,8 @@
+import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useReadContract } from 'wagmi';
 import { ABIs, getBondFactoryAddress, ARC_TESTNET_CHAIN_ID, BondFactoryAddresses } from '@/abi/contracts';
-import { useAccount } from 'wagmi';
-import { useChainId } from 'wagmi';
+import { useAccount, useChainId } from 'wagmi';
+import { ENVIO_GRAPHQL_ENDPOINT, ENVIO_QUERIES } from '@/config/envio';
 
 /**
  * Helper to get a safe chain ID
@@ -103,26 +104,53 @@ export function usePoolCount() {
 }
 
 /**
- * Get all pools from Factory contract (real-time)
+ * Get all pools from Envio Indexer (fast and synced)
  */
 export function useAllPools() {
-  const safeChainId = useSafeChainId();
-  const factoryAddress = getBondFactoryAddress(safeChainId);
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const result = useReadContract({
-    address: factoryAddress,
-    abi: ABIs.BondFactory,
-    functionName: 'getAllPools',
-    chainId: safeChainId,
-    query: {
-      enabled: !!factoryAddress,
-      refetchInterval: 10000,
-      staleTime: 0,
-    },
-  });
+  const fetchPools = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: ENVIO_QUERIES.GET_POOLS
+        })
+      });
 
+      const result = await response.json();
+      const pools = result.data?.Pool || [];
 
-  return result;
+      // Format to match the expected format in PoolContext
+      const formattedPools = pools.map((p: any) => ({
+        poolId: BigInt(p.poolId),
+        bondToken: p.bondToken,
+        bondSeries: p.bondSeries,
+        maturityDate: BigInt(p.maturityDate),
+        name: p.name,
+        symbol: p.symbol,
+        createdAt: BigInt(p.createdAt),
+        isActive: true
+      }));
+
+      setData(formattedPools);
+    } catch (error) {
+      console.error("Failed to fetch Envio pools:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPools();
+    const interval = setInterval(fetchPools, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return { data, isLoading, refetch: fetchPools };
 }
 
 /**

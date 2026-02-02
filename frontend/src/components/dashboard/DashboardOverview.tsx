@@ -10,20 +10,10 @@ export default function DashboardOverview() {
     timeToMaturity,
     isLoading,
     healthStatus,
-    daysSinceLast
+    daysSinceLast,
+    apy,
+    solvencyRatio
   } = useDashboardData();
-
-  const { data: treasuryStatus } = useTreasuryStatus();
-
-  // Treasury metrics
-  const treasuryBalance = treasuryStatus?.[0] ? formatUnits(treasuryStatus[0], 6) : "0";
-
-  // Calculate metrics
-  const solvencyRatio = parseFloat(totalDeposited) > 0
-    ? ((parseFloat(treasuryBalance) / parseFloat(totalDeposited)) * 100).toFixed(0)
-    : "0";
-
-  const apy = "365%";
 
   // --- Health Status Logic ---
   const getStatusColor = () => {

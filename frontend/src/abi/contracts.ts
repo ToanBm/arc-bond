@@ -12,7 +12,7 @@ import { PoolsAddresses, getPools, getPool, getAllPoolIds, type PoolInfo } from 
 // BondSeriesAddresses not available (factory-only mode)
 // BondTokenAddresses not available (factory-only mode)
 
-// Export tất cả ABIs
+// Export all ABIs
 export const ABIs = {
   BondSeries: BondSeriesABI.abi,
   BondToken: BondTokenABI.abi,
@@ -20,7 +20,7 @@ export const ABIs = {
   BondFactory: BondFactoryABI.abi,
 };
 
-// Export tất cả Addresses
+// Export all Addresses
 export const Addresses = {
   USDC: USDCAddresses,
   BondFactory: BondFactoryAddresses,

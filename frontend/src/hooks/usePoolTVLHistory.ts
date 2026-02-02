@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { usePublicClient } from 'wagmi';
-import { formatUnits, parseAbiItem } from 'viem';
 import { usePool } from '@/contexts/PoolContext';
+import { ENVIO_GRAPHQL_ENDPOINT, ENVIO_QUERIES } from '@/config/envio';
 
 export type TVLDataPoint = {
     date: string; // "Jan 19"
@@ -13,92 +12,88 @@ export type TVLDataPoint = {
 export type TimeRange = '1D' | '1W' | 'ALL';
 
 export function usePoolTVLHistory(range: TimeRange = 'ALL') {
-    const publicClient = usePublicClient();
     const { selectedPool } = usePool();
     const [data, setData] = useState<TVLDataPoint[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const bondSeriesAddress = selectedPool?.bondSeries;
-
     useEffect(() => {
-        if (!publicClient || !bondSeriesAddress) return;
+        if (!selectedPool?.poolId) return;
 
         let isMounted = true;
 
         const fetchHistory = async () => {
             setIsLoading(true);
             try {
-                const currentBlock = await publicClient.getBlockNumber();
+                const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: ENVIO_QUERIES.GET_POOL_TVL_HISTORY,
+                        variables: { poolId: selectedPool.poolId.toString() }
+                    })
+                });
 
-                // Adjusted for ~2s block time (Arc Testnet is fast)
-                // 1 day = 43,200 blocks. 
-                // For 12 points:
-                // 1D (24h): ~3,600 blocks per point (every 2h)
-                // 1W (7d): ~25,000 blocks per point (every 14h)
-                // ALL (14d): ~50,000 blocks per point (every 1 day)
+                const result = await response.json();
+                const snapshots = result.data?.PoolSnapshot || [];
 
-                const numPoints = 12;
-                let blocksPerPoint = BigInt(50000);
-                if (range === '1D') blocksPerPoint = BigInt(3600);
-                else if (range === '1W') blocksPerPoint = BigInt(25000);
-
+                // 1. Generate standard time buckets
+                const now = Math.floor(Date.now() / 1000);
                 const points: TVLDataPoint[] = [];
 
-                // SEQUENTIAL STATE QUERIES (The Right Principle)
-                for (let i = 0; i < numPoints; i++) {
-                    if (!isMounted) return;
+                let numPoints = 12;
+                let step = 3600; // default 1 hour
 
-                    const targetBlock = currentBlock - (BigInt(i) * blocksPerPoint);
-                    if (targetBlock <= BigInt(0)) break;
+                if (range === '1D') { numPoints = 24; step = 3600; }
+                else if (range === '1W') { numPoints = 7; step = 86400; }
+                else { numPoints = 12; step = 86400; }
 
-                    try {
-                        // Parallel fetch for TVL and Block Info (timestamp)
-                        const [rawTvl, block] = await Promise.all([
-                            publicClient.readContract({
-                                address: bondSeriesAddress as `0x${string}`,
-                                abi: [parseAbiItem('function totalDeposited() view returns (uint256)')],
-                                functionName: 'totalDeposited',
-                                blockNumber: targetBlock
-                            }),
-                            publicClient.getBlock({ blockNumber: targetBlock })
-                        ]);
+                // 2. Fill buckets with Fill-Forward logic
+                let lastKnownTvl = 0;
 
-                        const timestamp = Number(block.timestamp);
-                        const dateObj = new Date(timestamp * 1000);
+                // Sort snapshots ascending to track historical TVL
+                const sortedSnapshots = [...snapshots].sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
 
-                        // Label formatting based on range
-                        let label = "";
-                        if (range === '1D') {
-                            label = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }) + ":00";
-                        } else {
-                            label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        }
+                for (let i = numPoints - 1; i >= 0; i--) {
+                    const bucketTime = now - (i * step);
 
-                        points.push({
-                            date: label,
-                            timestamp: timestamp,
-                            tvl: Number(formatUnits(rawTvl as bigint, 6)),
-                            volume: 0
-                        });
-                        await new Promise(resolve => setTimeout(resolve, i === 0 ? 0 : 100));
-                    } catch {
-                        // Skip missing historical blocks silently
+                    // Find the latest snapshot that happened ON or BEFORE this bucketTime
+                    const availableSnapshot = sortedSnapshots
+                        .filter(s => Number(s.timestamp) <= bucketTime)
+                        .pop();
+
+                    if (availableSnapshot) {
+                        lastKnownTvl = Number(availableSnapshot.totalSupply) / 1e7;
                     }
+
+                    const dateObj = new Date(bucketTime * 1000);
+                    let label = "";
+                    if (range === '1D') {
+                        label = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', hour12: false }) + ":00";
+                    } else {
+                        label = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }
+
+                    points.push({
+                        date: label,
+                        timestamp: bucketTime,
+                        tvl: lastKnownTvl,
+                        volume: 0
+                    });
                 }
 
                 if (isMounted) {
-                    setData(points.reverse());
+                    setData(points);
                 }
-            } catch {
-                // Silently handle top-level error
+            } catch (error) {
+                console.error("Failed to fetch Envio TVL history:", error);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         };
 
         fetchHistory();
         return () => { isMounted = false; };
-    }, [publicClient, bondSeriesAddress, range]);
+    }, [selectedPool?.poolId, range]); // Added range to dependency array
 
     return { data, isLoading };
 }

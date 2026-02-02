@@ -2,12 +2,10 @@
   "name": "arc-bond-indexer",
   "version": "0.1.0",
   "scripts": {
-    "clean": "tsc --clean",
-    "build": "tsc --build",
-    "watch": "tsc --watch",
     "codegen": "envio codegen",
     "dev": "envio dev",
-    "start": "envio start"
+    "start": "envio start",
+    "build": "envio build"
   },
   "dependencies": {
     "envio": "^2.32.0"
@@ -18,8 +16,5 @@
   },
   "optionalDependencies": {
     "generated": "./generated"
-  },
-  "engines": {
-    "node": ">=18.0.0"
   }
 }

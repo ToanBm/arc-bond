@@ -1,6 +1,6 @@
 # 🏦 ArcBond: Fixed Yield RWA Protocol
 
-> **Institutional-grade Decentralized Fixed Yield Protocol** built on the Arc Testnet. ArcBond enables users to deposit USDC into bond series to earn a predictable daily yield (APY ~365% on testnet) with automated transparency and liquidity.
+> **Institutional-grade Decentralized Fixed Yield Protocol** built on the Arc Testnet. ArcBond enables users to deposit USDC into bond series to earn a predictable daily yield with automated transparency and liquidity.
 
 ---
 
@@ -8,8 +8,8 @@
 
 - 🏛️ **Fixed Yield Bonds**: Predictable high-yield returns distributed daily through snapshots.
 - ⛓️ **RWA Focused**: Designed for Real-World Asset representation and institutional yield mechanics.
-- 📊 **Real-time Analytics**: Live TVL growth tracking, solvency monitoring, and health status.
-- 🔄 **Automated Keeper**: Backend service ensures daily snapshots and interest accrual.
+- 📊 **Real-time Analytics**: Live TVL growth tracking using Envio Indexer, solvency monitoring, and health status.
+- 🔄 **Envio Indexer**: high-performance indexing for historical TVL charts and user activity logs.
 - 🌉 **Integrated Bridge**: Seamlessly move USDC between Arc and other testnets (Ethereum, Base, etc.).
 - 🤝 **P2P Marketplace**: Gasless marketplace using EIP-712 signatures for secondary bond trading.
 
@@ -20,8 +20,8 @@
 ```bash
 arc-bond/
 ├── contracts/  # Hardhat & Solidity - Core logic & P2P Market
-├── frontend/   # Next.js & Wagmi - Modern UI & Analytics Dashboard
-└── backend/    # Node.js Keeper - Automated snapshots & health monitoring
+├── frontend/   # Next.js & Wagmi - Modern UI & Envio Integration
+└── indexer/    # Envio Indexer - High-performance blockchain data indexing
 ```
 
 ---
@@ -42,19 +42,19 @@ npx hardhat compile
 # Deployment: npx hardhat run scripts/deployBondSystem.ts --network arc
 ```
 
-### 2. Frontend Dashboard
+### 2. Envio Indexer
+```bash
+cd indexer
+pnpm dev
+# This starts the indexer and GraphQL playground at http://localhost:8080
+```
+
+### 3. Frontend Dashboard
 ```bash
 cd frontend
 npm install
 npm run dev
 # Open http://localhost:3000
-```
-
-### 3. Backend Keeper (Optional)
-```bash
-cd backend
-npm install
-npm start
 ```
 
 ---

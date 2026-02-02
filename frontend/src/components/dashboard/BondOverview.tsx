@@ -5,19 +5,7 @@ import { useTreasuryStatus } from "@/hooks/useBondSeries";
 import { formatUnits } from "viem";
 
 export default function BondOverview() {
-  const { totalDeposited, timeToMaturity, isLoading } = useDashboardData();
-  const { data: treasuryStatus } = useTreasuryStatus();
-
-  // Treasury balance from contract
-  const treasuryBalance = treasuryStatus?.[0] ? formatUnits(treasuryStatus[0], 6) : "0";
-
-  // Calculate solvency ratio (Treasury / Total AUM)
-  const solvencyRatio = parseFloat(totalDeposited) > 0
-    ? ((parseFloat(treasuryBalance) / parseFloat(totalDeposited)) * 100).toFixed(0)
-    : "0";
-
-  // APY: 1% per day = 365% per year
-  const apy = "365%";
+  const { totalDeposited, timeToMaturity, isLoading, apy, solvencyRatio } = useDashboardData();
 
   if (isLoading) {
     return (

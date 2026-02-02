@@ -1,13 +1,13 @@
-import { usePublicClient, useAccount } from 'wagmi';
+import { useAccount } from 'wagmi';
 import { useState, useEffect } from 'react';
-import { parseAbiItem, formatUnits, type Log } from 'viem';
-import { usePool } from '@/contexts/PoolContext';
+import { formatUnits } from 'viem';
+import { ENVIO_GRAPHQL_ENDPOINT, ENVIO_QUERIES } from '@/config/envio';
 
-export type ActivityType = 'Deposit' | 'Redeem' | 'Claim Interest';
+export type ActivityType = 'Deposit' | 'Redeem' | 'Claim Interest' | 'Transfer' | 'MINT' | 'BURN';
 
 export interface ActivityItem {
     id: string;
-    type: ActivityType;
+    type: string;
     amount: string;
     asset: string;
     time: string;
@@ -18,113 +18,72 @@ export interface ActivityItem {
 }
 
 /**
- * Hook to fetch user's recent activity logs from the blockchain
+ * Hook to fetch user's recent activity logs from Envio Indexer
  */
 export function useUserActivity() {
     const { address } = useAccount();
-    const { selectedPool } = usePool();
-    const publicClient = usePublicClient();
     const [activities, setActivities] = useState<ActivityItem[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
-    const bondSeriesAddress = selectedPool?.bondSeries as `0x${string}`;
-
     useEffect(() => {
-        async function fetchActivities() {
-            if (!address || !bondSeriesAddress || !publicClient) return;
+        if (!address) return;
 
+        let isMounted = true;
+
+        async function fetchActivities() {
             setIsLoading(true);
             try {
-                const currentBlock = await publicClient.getBlockNumber();
-                // Reduce range and fetch in one go to avoid parallel overhead/rate limits
-                const fetchRange = BigInt(20000);
-                const startBlock = currentBlock > fetchRange ? currentBlock - fetchRange : BigInt(0);
+                const response = await fetch(ENVIO_GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: ENVIO_QUERIES.GET_USER_ACTIVITY,
+                        variables: { user: address.toLowerCase() }
+                    })
+                });
 
-                const eventConfigs = [
-                    {
-                        type: 'Deposit' as ActivityType,
-                        abi: parseAbiItem('event Deposited(address indexed user, uint256 usdcAmount, uint256 bondAmount, uint256 timestamp)'),
-                        color: 'text-blue-600'
-                    },
-                    {
-                        type: 'Redeem' as ActivityType,
-                        abi: parseAbiItem('event Redeemed(address indexed user, uint256 bondAmount, uint256 usdcAmount, uint256 timestamp)'),
-                        color: 'text-rose-600'
-                    },
-                    {
-                        type: 'Claim Interest' as ActivityType,
-                        abi: parseAbiItem('event InterestClaimed(address indexed user, uint256 amount, uint256 timestamp)'),
-                        color: 'text-emerald-600'
-                    }
-                ];
+                const result = await response.json();
+                const items = result.data?.Activity || [];
 
-                // Fetch logs sequentially or in a single call if possible
-                // Viem getLogs with 'event' doesn't support arrays of events easily
-                // So we'll fetch them and catch 429
+                const formattedActivities: ActivityItem[] = items.map((item: any) => {
+                    const timestamp = Number(item.timestamp);
+                    const type = item.activityType;
 
-                const allLogs: (Log & { config: typeof eventConfigs[0] })[] = [];
-                for (const config of eventConfigs) {
-                    try {
-                        const logs = await publicClient.getLogs({
-                            address: bondSeriesAddress,
-                            event: config.abi,
-                            args: { user: address },
-                            fromBlock: startBlock,
-                            toBlock: currentBlock
-                        });
-                        allLogs.push(...logs.map(l => ({ ...l, config })));
-
-                        await new Promise(resolve => setTimeout(resolve, 200));
-                    } catch {
-                        // Skip failed config silently
-                    }
-                }
-
-                const formattedActivities: ActivityItem[] = allLogs.map((log) => {
-                    const { args, transactionHash, config } = log as unknown as {
-                        args: { usdcAmount?: bigint; amount?: bigint; timestamp?: bigint };
-                        transactionHash: `0x${string}`;
-                        config: (typeof eventConfigs)[number];
-                    };
-                    let amountStr = '0';
-
-                    if (config.type === 'Deposit') {
-                        amountStr = formatUnits(args.usdcAmount ?? BigInt(0), 6);
-                    } else if (config.type === 'Redeem') {
-                        amountStr = formatUnits(args.usdcAmount ?? BigInt(0), 6);
-                    } else if (config.type === 'Claim Interest') {
-                        amountStr = formatUnits(args.amount ?? BigInt(0), 6);
-                    }
-
-                    const timestamp = Number(args.timestamp ?? 0);
+                    let color = 'text-gray-600';
+                    if (type === 'MINT' || type === 'Deposit') color = 'text-blue-600';
+                    else if (type === 'BURN' || type === 'Redeem') color = 'text-rose-600';
+                    else if (type === 'TRANSFER') color = 'text-emerald-600';
 
                     return {
-                        id: `${transactionHash}-${log.logIndex}`,
-                        type: config.type,
-                        amount: amountStr,
+                        id: item.id,
+                        type: type === 'MINT' ? 'Deposit' : type === 'BURN' ? 'Redeem' : type,
+                        amount: formatUnits(BigInt(item.amount) / 10n, 6), // Fixed: Divide by 10 to show USDC value
                         asset: 'USDC',
                         time: timestamp > 0 ? formatRelativeTime(timestamp) : 'Just now',
                         status: 'Success',
-                        hash: transactionHash,
+                        hash: item.txHash,
                         timestamp: timestamp,
-                        color: config.color
+                        color: color
                     };
                 });
 
-                setActivities(formattedActivities.sort((a, b) => b.timestamp - a.timestamp));
-
-            } catch {
-                // Silently handle top-level error
+                if (isMounted) {
+                    setActivities(formattedActivities);
+                }
+            } catch (error) {
+                console.error("Failed to fetch Envio activity:", error);
             } finally {
-                setIsLoading(false);
+                if (isMounted) setIsLoading(false);
             }
         }
 
         fetchActivities();
-        // Refresh every 30 seconds
-        const interval = setInterval(fetchActivities, 30000);
-        return () => clearInterval(interval);
-    }, [address, bondSeriesAddress, publicClient]);
+        const interval = setInterval(fetchActivities, 15000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [address]);
 
     return { activities, isLoading };
 }

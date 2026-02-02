@@ -35,6 +35,19 @@ export function useDashboardData() {
   const hoursToMaturity = Math.floor(Math.max(0, timeToMaturity) / 3600);
   const minutesToMaturity = Math.floor((Math.max(0, timeToMaturity) % 3600) / 60);
 
+  const { data: treasuryStatus } = useTreasuryStatus();
+
+  // Calculate real APY based on 0.10 USDC/day coupon logic
+  const dailyCoupon = 0.10;
+  const tvlNum = parseFloat(totalDeposited);
+  const realAPY = tvlNum > 0 ? ((dailyCoupon / tvlNum) * 365 * 100).toFixed(2) : "0";
+
+  // Calculate solvency ratio
+  const treasuryBalance = treasuryStatus?.[0] ? formatUnits(treasuryStatus[0], 6) : "0";
+  const solvencyRatio = tvlNum > 0
+    ? ((parseFloat(treasuryBalance) / tvlNum) * 100).toFixed(0)
+    : "0";
+
   return {
     // Series info
     totalDeposited,
@@ -42,6 +55,8 @@ export function useDashboardData() {
     maturityDate,
     hasMatured,
     timeToMaturity: hasMatured ? 'Matured' : `${hoursToMaturity}h ${minutesToMaturity}m`,
+    apy: realAPY,
+    solvencyRatio,
 
     // Status
     emergencyMode,
